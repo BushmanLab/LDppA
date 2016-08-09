@@ -32,3 +32,29 @@ loas <-
             if (is.list(res)) do.call(cbind,res) else res
         }
     }
+
+##' Move Compositions to Simplex Lattice
+##'
+##' 
+##' @title Nearest Lattice Point on a Simplex
+##' @param p a matrix of compositions
+##' @param incr numeric value st \code{0<incr && incr < 1}.  The
+##'     inverse will be the number of intervals to use in forming a
+##'     lattice on a simplex.
+##' @return a matrix of compositions
+##' @export
+##' @author Charles Berry
+roundSimplex <- function(p,incr=0.1)
+{
+    Nincr <- round(1/incr)
+    start <- as.data.frame(p*Nincr)
+    trial <- trunc(start)
+    for (i in 1:ncol(p)){
+        under <- round(Nincr-rowSums(trial))
+        differ <- start-trial
+        tops <- do.call(pmax,differ)
+        trial <- trial +
+            (under>0)*(differ==tops)
+    }
+    do.call(cbind,trial)/Nincr
+}
