@@ -7,18 +7,22 @@
 ##' the same probability vector and will be summed to update eta. The
 ##' draws for Y can collapse over X and R.
 ##' @title ldppa.gibbs.2
-##' @param V numeric vector of initial values for \code{V}. Last value is 1.0.
+##' @param V numeric vector of initial values for \code{V}. Last value
+##'     is 1.0.
 ##' @param eta numeric matrix of initial values for \code{eta}.
 ##' @param alpha numeric value to initialize \code{alpha}.
 ##' @param params list of hyperparameters with elements \code{omega},
-##'     \code{lambda}, \code{psi}, \code{epsilon}, and \code{s}
+##'     \code{lambda}, \code{psi}, \code{epsilon}, and \code{s}. Note
+##'     that \code{epsilon[1]} must be an integer, but can be set to
+##'     zero (which with \code{epsilon[2]==0} corresponds to a
+##'     non-informative prior for the number of cells sampled).
 ##' @param tab the result of \code{\link{wttab}()}
 ##' @param nreps number of iterations to run after burn-in
 ##' @param nburn number of iterations to run before retaining samples
 ##' @param nthin retain values for \code{nreps/nthin} of the
 ##'     post-burn-in iterations
 ##' @return \code{list} with components \code{monitors} (recording
-##'     components of the log posterior), \code{Vs} (values of V},
+##'     components of the log posterior), \code{Vs} (values of V),
 ##'     \code{etas} (values of eta), and \code{call} (the call).
 ##' @export
 ##' @importFrom stats rbeta rgamma rmultinom dnbinom rnbinom
@@ -68,11 +72,15 @@ ldppa.gibbs.2 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
 
         ## sample z
         ## all conditioned on Z:
-        logPrWplus <- outer(PrW,Wplus, function(p,N)
-     dnbinom( N, eps[1], 1-eps[2]/p, log=TRUE))
-        logPrW.giv.Wplus <-
-     tcrossprod(log(etaOmDPsi/PrW),W)
-        logPrW <- logPrWplus+logPrW.giv.Wplus
+      logPrWplus <-
+           if (eps[1]==0)
+ 	      0
+           else 
+ 	      outer(PrW,Wplus, function(p,N)
+                   dnbinom( N, eps[1], 1-eps[2]/p, log=TRUE))
+      logPrW.giv.Wplus <-
+           tcrossprod(log(etaOmDPsi/PrW),W)
+      logPrW <- logPrWplus+logPrW.giv.Wplus
 
         pr.Z.giv.W.V.eta <-
      prop.table(
@@ -119,8 +127,8 @@ ldppa.gibbs.2 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
         z.tab <- rowSums(zy.tab)
         z.gt <- sum(z.tab)-cumsum(z.tab)
         V <- c(rbeta( length(V)-1, 1+head(z.tab,-1),
-        	     alpha+head(z.gt,-1)),
- 	      1)
+         	    alpha+head(z.gt,-1)),
+  	     1)
         ## sample alpha
         alpha <- rgamma(1,s[1]+T-1,rate=s[2]-sum(log(1-head(V,-1))))
         ## monitor
