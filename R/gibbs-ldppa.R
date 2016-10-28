@@ -44,14 +44,14 @@ ldppa.gibbs <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
         ## sample z
         logprob.kernel <- tcrossprod(log(eta%*%omeg),y)
         prob.z.giv.y.v.eta <-
-    	prop.table(
+            prop.table(
                 exp(sweep(logprob.kernel,2,
                           apply(logprob.kernel,2,max),"-")) *
                 prob.z.v(V),2)
         zy.tab <- sapply(1:length(n),
                          function(x) rmultinom(1,n[x],prob.z.giv.y.v.eta[,x]))
         ## z.list <-
-     ##     lapply(1:length(n),
+        ##     lapply(1:length(n),
         ##            function(x) sample.int(T,n[x],
         ##                                   prob=prob.z.giv.y.v.eta[,x],
         ##                                   replace=TRUE))
@@ -79,26 +79,26 @@ ldppa.gibbs <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
         z.tab <- rowSums(zy.tab)
         z.gt <- sum(z.tab)-cumsum(z.tab)
         V <- c(rbeta( length(V)-1, 1+head(z.tab,-1),
-    		 alpha+head(z.gt,-1)),
-    	   1)
+                     alpha+head(z.gt,-1)),
+               1)
         ## sample alpha
         alpha <- rgamma(1,s[1]+T-1,rate=s[2]-sum(log(1-head(V,-1))))
         ## monitor
         vals <- c(
-    	alpha= logP.alpha(alpha,s),
-    	V= logP.V.alpha(V,alpha),
-    	z= logP.ztab.v(z.tab,V),
-    	eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
-    	Y = logP.Y.eta.V(y,eta,V,omeg,n)
+            alpha= logP.alpha(alpha,s),
+            V= logP.V.alpha(V,alpha),
+            z= logP.ztab.v(z.tab,V),
+            eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
+            Y = logP.Y.eta.V(y,eta,V,omeg,n)
         )
 
         if ( i>nburn &&
              ((i-nburn-1)%%nthin==0 || i == (nreps+nburn) ))
         {
-    	ikeep <- ikeep +1
-    	monitors[[ikeep]] <- vals
-    	etas[[ikeep]] <- eta
-    	Vs[[ikeep]] <- V
+            ikeep <- ikeep +1
+            monitors[[ikeep]] <- vals
+            etas[[ikeep]] <- eta
+            Vs[[ikeep]] <- V
         }
     }
 

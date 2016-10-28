@@ -40,14 +40,14 @@ rQx <- function(fit,tab)
     tabl <- tab$tab
     res <-
         sapply(tab$data.index,
-     	  function(x)
-     	  {
+               function(x)
+               {
                    sapply(1:ncol(tabl),
                           function(y) if (tabl[x,y]==0)
                                           rep(0,ncol(tabl))
-     				 else
+                                      else
                                           rmulti(tabl[x,y],fit$mu[x,,y]))
-     	  })
+               })
     dim(res) <- c(ncol(tabl),ncol(tabl),length(tab$data.index))
     aperm(res,c(3,1,2))
 }

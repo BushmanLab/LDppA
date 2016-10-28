@@ -17,7 +17,7 @@ dZ.V <- function(V){
         V* exp( log1p(-V[,-nc])%*%upper.tri(diag(nc))[-nc,] )
     } else {
         prob.z.v(V)
-        }
+    }
 }
 
 prob.z.v <- function(v) v*exp(c(0,cumsum(log1p(-v)[-length(v)])))

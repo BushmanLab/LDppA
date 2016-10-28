@@ -62,11 +62,11 @@ ldppa.VarBayes <-
         initialVals <- list(
             gamma = gam0,
             w = cbind(s[1]+TEE-1,
-     		 s[2] - sum(digamma(gam0[,2]) -
+                      s[2] - sum(digamma(gam0[,2]) -
                                  digamma(rowSums(gam0)))),
             tau = tau0,
             phi = phi.initial(tab$tab,
-     			 mu.initial(tab,omega) , gam0, tau0 ))
+                              mu.initial(tab,omega) , gam0, tau0 ))
     }
 
     fit2 <- fit1 <- ldppa.vb(tab, params,initialVals)
@@ -89,13 +89,13 @@ lower.bound <- function(tab,params,fit)
 
 {
     lb(tab,
-        fit[["w"]],
-        fit[["gamma"]],
-        fit[["tau"]],
-        fit[["phi"]],
-        fit[["mu"]],
-        params[["lambda"]],
-        params[["omega"]],
-        fit[["alpha"]],
-        params[["s"]])
+       fit[["w"]],
+       fit[["gamma"]],
+       fit[["tau"]],
+       fit[["phi"]],
+       fit[["mu"]],
+       params[["lambda"]],
+       params[["omega"]],
+       fit[["alpha"]],
+       params[["s"]])
 }

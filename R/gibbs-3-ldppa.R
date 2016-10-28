@@ -63,30 +63,30 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
 
     if (nburn>0){
         loop <- .C("innerLoop",
-                     reps=as.integer(nburn),
-                     T=as.integer(T),
-                     ka=as.integer(K),
-                     ko=as.integer(K),
-                     n=as.integer(n),
-                     ndat=as.integer(ndat),
-                     w=as.integer(W),
-                     wp=as.integer(Wplus),
-                     s=as.double(s),
-                     lamb=as.double(lamb),
-                     omcp=as.double(omCPsi),
-                     omdp=as.double(omDPsi),
-                     eps=as.double(eps),
-                     V=as.double(V),
-                     alpha=as.double(alpha),
-                     eta=as.double(eta),
-                     zy=integer(T*ndat),
-                     eoy=double(ka),
-                     etaomdp=double(T*ka),
-                     prw=double(T),
-                     pz=double(T),
-                     workT=double(T),
-                     xstmp=integer(ka),
-                     xsums=integer(T*ka))
+                   reps=as.integer(nburn),
+                   T=as.integer(T),
+                   ka=as.integer(K),
+                   ko=as.integer(K),
+                   n=as.integer(n),
+                   ndat=as.integer(ndat),
+                   w=as.integer(W),
+                   wp=as.integer(Wplus),
+                   s=as.double(s),
+                   lamb=as.double(lamb),
+                   omcp=as.double(omCPsi),
+                   omdp=as.double(omDPsi),
+                   eps=as.double(eps),
+                   V=as.double(V),
+                   alpha=as.double(alpha),
+                   eta=as.double(eta),
+                   zy=integer(T*ndat),
+                   eoy=double(ka),
+                   etaomdp=double(T*ka),
+                   prw=double(T),
+                   pz=double(T),
+                   workT=double(T),
+                   xstmp=integer(ka),
+                   xsums=integer(T*ka))
         eta <- matrix(loop$eta,nrow=T)
         V <- loop$V
         alpha <- loop$alpha
@@ -133,11 +133,11 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
 
         ## monitor
         vals <- c(
-  	  alpha= logP.alpha(alpha,s),
-  	  V= logP.V.alpha(V,alpha),
-  	  z= logP.ztab.v(rowSums(zy.tab),V),
-  	  eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
-  	  Y = logP.Y.eta.V(W,eta,V,omega,n,psi)
+            alpha= logP.alpha(alpha,s),
+            V= logP.V.alpha(V,alpha),
+            z= logP.ztab.v(rowSums(zy.tab),V),
+            eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
+            Y = logP.Y.eta.V(W,eta,V,omega,n,psi)
         )
 
 

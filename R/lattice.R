@@ -25,7 +25,7 @@ loas <-
         } else {
             res <-
                 sapply(from:to,
- 		      function(x)
+                       function(x)
                            rbind(x,
                                  loas(from=0,to=to-x,times=times-1L),
                                  deparse.level=0))
