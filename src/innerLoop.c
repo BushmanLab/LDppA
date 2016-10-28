@@ -1,8 +1,8 @@
 #include <R.h>
-  #include <Rmath.h>
-  #include <R_ext/Random.h>
-  #include <R_ext/Print.h>
-  #include <R_ext/BLAS.h>
+#include <Rmath.h>
+#include <R_ext/Random.h>
+#include <R_ext/Print.h>
+#include <R_ext/BLAS.h>
 
 /* utils */
 
@@ -64,7 +64,7 @@ void zysum(
     }
     for (int t=0;t<*T;t++) workT[t]/=prTot;
     rmultinom((int) n[idat],workT,(int) T[0], zy+idat**T);
-  }
+  }  
 #ifdef TESTING
   PutRNGstate();
 #endif
@@ -125,6 +125,7 @@ void innerLoop(int *reps,
 
     for (int t=0;t<*T;t++){
       double seen=0.0;
+      for (int k=0;k<*ka;k++) xsums[t+k**T]=0;
       for (int k=0;k<*ko;k++) {
         /* yz is number of cells in cluster t, cell type k */
         double yz=0.0;
@@ -142,26 +143,26 @@ void innerLoop(int *reps,
         rmultinom( (int) yz, eoy, *ka, xstmp);
         for (int k2=0;k2<*ka;k2++) xsums[t+k2**T]+=xstmp[k2];
       }
-           for (int idat=0;idat<*ndat;idat++)
-             seen+= (double) zy[t+idat**T] * (eps[0] + (double) wp[idat]);
-           double nbparm = (1.0-prw[t])/(1.0+eps[1]);
-           int notseen = (int) rnbinom(seen,1.0-nbparm);
-           /* Rprintf("seen = %f notseen = %d\n", seen, notseen); */
-           if (seen!=0.0 && notseen){
-             /* conditional prob of actual given unseen */
-             double eoysum2=0.0;
-             for (int k=0;k<*ka;k++){
-               eoy[k]=eta[t+k**T]*omcp[k];
-               eoysum2+=eoy[k];
-             }
-             for (int k=0;k<*ka;k++) eoy[k]/=eoysum2;
-             /* sample actual given number unseen */
-             rmultinom(notseen, eoy, *ka, xstmp);
-             for (int k=0;k<*ka;k++) xsums[t+k**T]+=xstmp[k];
-            }
-           
+      for (int idat=0;idat<*ndat;idat++)
+        seen+= (double) zy[t+idat**T] * (eps[0] + (double) wp[idat]);
+      double nbparm = (1.0-prw[t])/(1.0+eps[1]);
+      int notseen = (int) rnbinom(seen,1.0-nbparm);
+      /* Rprintf("seen = %f notseen = %d\n", seen, notseen); */
+      if (seen!=0.0 && notseen){
+        /* conditional prob of actual given unseen */
+        double eoysum2=0.0;
+        for (int k=0;k<*ka;k++){
+          eoy[k]=eta[t+k**T]*omcp[k];
+          eoysum2+=eoy[k];
+        }
+        for (int k=0;k<*ka;k++) eoy[k]/=eoysum2;
+        /* sample actual given number unseen */
+        rmultinom(notseen, eoy, *ka, xstmp);
+        for (int k=0;k<*ka;k++) xsums[t+k**T]+=xstmp[k];
+      }
+      
 
-	  }
+    }
 
     /* eta */
 
@@ -170,40 +171,41 @@ void innerLoop(int *reps,
     for (int t=0; t<*T; t++){
       double x=0.0;
       for (int k=0;k<*ka;k++){
-      int indx=t+k**T;
-      eta[indx]=rgamma(xsums[indx]+lamb[k], 1.0);
-      x+=eta[indx];
+	int indx=t+k**T;
+	eta[indx]=rgamma(xsums[indx]+lamb[k], 1.0);
+	x+=eta[indx];
       }
       for (int k=0;k<*ka;k++){
-      int indx=t+k**T;
-      eta[indx]=eta[indx]/x;
+	int indx=t+k**T;
+	eta[indx]=eta[indx]/x;
       }
-     }
+    }
     
-	/* V */
+    /* V */
 
-	      /* double *zy, *V , *workT, *alpha, int *ka, *T */
-	      
-	      V[*T-1L]=1.0;
-	      for (int t=0;t<*T;t++){
-	        double x=0.0;
-	        for (int k=0;k<*ka;k++) x+=zy[t+k**T];
-	        workT[t]=x;
-	       }
-	      double zgt=*alpha+workT[*T-1];
-	      for (int t=*T-2;t>=0;t--){
-	        double beta=rbeta(1.0+workT[t],zgt);
-	        V[t]= beta>0.99 ? 0.99 : beta;
-	        zgt+=workT[t];
-	       }
+    /* double *V , *workT, *alpha, int *ndat, *T, *zy */
+    
+    V[*T-1L]=1.0;
+    for (int t=0;t<*T;t++){
+      int x=0.0;
+      for (int idat=0;idat<*ndat;idat++)
+        x+=zy[t+idat**T];
+      workT[t]= (double) x;
+    }
+    double zgt=*alpha+workT[*T-1];
+    for (int t=*T-2;t>=0;t--){
+      double beta=rbeta(1.0+workT[t],zgt);
+      V[t]= beta>0.99 ? 0.99 : beta;
+      zgt+=workT[t];
+    }
 
-	/* alpha */
+    /* alpha */
 
-	      /* double *alpha, *V, *s, *T */
-	      double sumclog=0.0;
-	      for (int t=0; t<*T-1; t++) sumclog+=log(1.0-V[t]);
-	      alpha[0]=rgamma(s[0]+*T-1,s[1]-sumclog);
-	}
+    /* double *alpha, *V, *s, *T */
+    double sumclog=0.0;
+    for (int t=0; t<*T-1; t++) sumclog+=log(1.0-V[t]);
+    alpha[0]=rgamma(s[0]+*T-1,1.0/(s[1]-sumclog));
+  }
   /* fini */
 
   PutRNGstate();
