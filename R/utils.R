@@ -22,7 +22,9 @@ dZ.V <- function(V){
 
 prob.z.v <- function(v) v*exp(c(0,cumsum(log1p(-v)[-length(v)])))
 
+##' @importFrom stats dmultinom
 logP.ztab.v <- function(ztab,v){
-    pie <- log(prob.z.v(v))
-    sum(pie*ztab)
+    pie <- prob.z.v(v)
+    ## unvectorized dmultinom() is OK here
+    dmultinom(ztab,prob=pie,log=TRUE)
 }
