@@ -1,4 +1,4 @@
-##' @importFrom stats cutree hclust dist coef lm
+##' @importFrom stats cutree hclust dist coef lm optim
 gamma.initial <- function(Ntau) cbind(1,(Ntau-1):1)
 
 ## this can be hastened by replacing prop.table() 
@@ -12,14 +12,36 @@ mu.initial <- function(tab,omega){
     res}
 
 tau.initial <-
-    function(tab,omega,lambda,k=NULL) {
+    function(tab,omega,lambda,k=NULL,max.rows=NULL) {
+        eta.from.phi <-
+            function(phi) c(1,exp(phi))/(1+sum(exp(phi)))
+        argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
+            eta <- c(1,exp(phi))/(1+sum(exp(phi)))
+            eta.op <- eta%*%omega.psi
+            eta.op <- eta.op/sum(eta.op)
+            res <- dmultinom(w,prob=eta.op,log=TRUE)
+            res
+        }
         y <- tab$tab
         wt <- tab$n
+        cells <- rowSums(y)*wt
+        if (is.null(max.rows)) max.rows <-
+                                   min(sum(wt),k*100)
         if (is.null(k)) k <- length(lambda)
-        boot.samp <- sample(nrow(y),nrow(y),replace=TRUE,prob=wt)
-        y <- y[boot.samp,]
+        boot.samp <- sample(nrow(y),max.rows,replace=TRUE,prob=wt)
+        rowvals <- apply(y,1,
+                         function(x){
+                             opt <- optim(rep(0,length(lambda)-1),
+                                          argmax.llk,
+                                          w=x,
+                                          omega=omega,
+                                          control=list(fnscale=-1))
+                             eta.from.phi(opt$par)
+                         })
+
+        y <- t(rowvals[,boot.samp])*cells[boot.samp]
         ind <- cutree(hclust(dist(y)),k=k)
-        coef(lm(y~0+as.factor(ind)))+rep(lambda,each=k)
+        unname(coef(lm(y~0+as.factor(ind)))+rep(lambda,each=k))
     }
 
 x.n.plus.r.plus <- function(y,mu)
