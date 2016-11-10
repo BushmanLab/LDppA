@@ -145,10 +145,10 @@ void innerLoop(int *reps,
       }
       for (int idat=0;idat<*ndat;idat++)
         seen+= (double) zy[t+idat**T] * (eps[0] + (double) wp[idat]);
-      double nbparm = (1.0-prw[t])/(1.0+eps[1]);
-      int notseen = (int) rnbinom(seen,1.0-nbparm);
+      double nbparm = fmax2( 0.0, (1.0-prw[t])/(1.0+eps[1]) );
+      int notseen = (seen==0.0)? 0L: (int) rnbinom(seen,1.0-nbparm);
       /* Rprintf("seen = %f notseen = %d\n", seen, notseen); */
-      if (seen!=0.0 && notseen){
+      if (notseen!=0){
         /* conditional prob of actual given unseen */
         double eoysum2=0.0;
         for (int k=0;k<*ka;k++){
