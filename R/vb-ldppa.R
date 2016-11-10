@@ -4,7 +4,9 @@
 ##' @title ldppa.vb
 ##' @param wttab a \code{list} with elements \code{tab} a table of
 ##'     counts and \code{n} rowwise case weights for the table.
-##' @param params original parameter values
+##' @param params original parameter values as a list with elements
+##'     named \dQuote{omega}, \dQuote{lambda}, and
+##'     \dQuote{s}. Ensure that \code{all(rowSums(omega)==1)}
 ##' @param initialValues intial values for variation parameters
 ##' @return \code{list} of updated variational parameters
 ##' @export
