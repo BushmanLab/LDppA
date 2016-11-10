@@ -1,3 +1,7 @@
+## sum(log (b^a)) safely when a==0, since b might be zero too
+sumAlogB <- function(a,b) { b[a==0] <- 1.0; sum(a * log (b))}
+
+
 ## omit the unused Tth values (for which EqlogV=0 and Eqlog1mV=-Inf)
 EqlogV <- function(gamma) digamma(gamma[,1])-digamma(rowSums(gamma))
 
@@ -43,7 +47,7 @@ EqlogPXmqX <- function(tab,mu,phi,tau){
     N <- nrow(phi)
     ElogEta <- phi%*%(digamma(tau)-digamma(rowSums(tau))) # N x K
     mu.y <- mu*as.vector(y[,rep(1:K,each=K)]*n) # N x K x K
-    sum(rowSums(mu.y,dims=2)*ElogEta) -sum(mu.y*log(mu))
+    sum(rowSums(mu.y,dims=2)*ElogEta) -sumAlogB(mu.y, mu)
 }
 
 
@@ -56,7 +60,7 @@ EqlogPY <- function(tab,mu,omega){
     n <- tab$n
     N <- nrow(y)
     K <- ncol(y)
-    sum(as.vector(y[,rep(1:K,each=K)]*n)*mu*rep(log(omega),each=N))
+    sumAlogB(as.vector(y[,rep(1:K,each=K)]*n)*mu,rep(omega,each=N))
 }
 
 
