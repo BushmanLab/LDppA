@@ -17,9 +17,13 @@ logP.alpha <- function(alpha,s){
 logP.Y.eta.V <- function(y,eta,V,omega,n=1,psi=NULL){
     prob <- exp(log.prob.v(V[-length(V)]))
     pr.y.eta.t <- eta%*%omega
-    if (!is.null(psi))
-        pr.y.eta.t <- 
-            quick.prop.table(sweep(pr.y.eta.t,2,psi,"*"),1)
-    llk <- dmulti(y,pr.y.eta.t)%*%prob
+    if (!is.null(psi)){
+        pr.y.eta.t <- sweep(pr.y.eta.t,2,psi,"*")
+        pr.obs <- 1/rowSums(pr.y.eta.t)
+        llk <-
+            (pr.obs * dmulti(y,quick.prop.table(pr.y.eta.t,1)))%*%prob
+    } else {
+        llk <- dmulti(y,quick.prop.table(pr.y.eta.t,1))%*%prob
+    }
     sum(n*log(llk))
 }
