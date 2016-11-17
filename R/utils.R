@@ -1,3 +1,35 @@
+##' Discrete Representation of Posterior
+##'
+##' The posterior is discretized by assigning the mass to the nearest
+##' point on a latttice on a k simplex. 
+##' @title Discrete Lattice Mass
+##' @param eta M by \code{k+1} numeric matrix of composition probabilities
+##' @param V \code{ninterval} numeric vector of stick-breaking probabilities. 
+##' @param nintervals integer value giving number of intervals in each dimension.
+##' @param digits integer giving number of trailing digits to use in labels. 
+##' @return named vector of probabilities
+##' @export
+##' @importFrom stats xtabs
+##' @author Charles Berry
+lmass <- function(eta,V,nintervals=10,digits=NULL){
+    if (is.null(digits))
+        digits <- if (nintervals==10) 1 else 2
+    k <- ncol(eta)-1
+    lattice.levels <-
+        do.call(paste,as.data.frame(t(loas(0,nintervals,k)/nintervals)))
+    factor.eta <-
+        factor(do.call(paste,as.data.frame(roundSimplex(eta,1/nintervals))),
+	       lattice.levels)
+    pr <- dZ.V(V)
+    tab <- cbind(xtabs(pr~factor.eta))
+    colnames(tab) <- NULL
+    fmt <- paste0(" %.",digits,"f")
+    rowvals <- do.call(rbind,lapply(strsplit(rownames(tab)," "),
+                                    function(x) sprintf(fmt,as.numeric(x))))
+    rownames(tab) <- do.call(paste,as.data.frame(rowvals))
+    tab
+}
+
 ##' Mixture Component Probability from Stick Breaking
 ##'
 ##' Given a collection of values, \code{V}, of fractions (except the
