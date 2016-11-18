@@ -13,7 +13,7 @@
 ##' @author Charles Berry
 lmass <- function(eta,V,nintervals=10,digits=NULL){
     if (is.null(digits))
-        digits <- if (nintervals==10) 1 else 2
+        digits <- if (nintervals%in%c(10,5,2)) 1 else 2
     k <- ncol(eta)-1
     lattice.levels <-
         do.call(paste,as.data.frame(t(loas(0,nintervals,k)/nintervals)))
@@ -21,13 +21,12 @@ lmass <- function(eta,V,nintervals=10,digits=NULL){
         factor(do.call(paste,as.data.frame(roundSimplex(eta,1/nintervals))),
 	       lattice.levels)
     pr <- dZ.V(V)
-    tab <- cbind(xtabs(pr~factor.eta))
-    colnames(tab) <- NULL
+    tab <- xtabs(pr~factor.eta)
     fmt <- paste0(" %.",digits,"f")
-    rowvals <- do.call(rbind,lapply(strsplit(rownames(tab)," "),
+    rowvals <- do.call(rbind,lapply(strsplit(names(tab)," "),
                                     function(x) sprintf(fmt,as.numeric(x))))
-    rownames(tab) <- do.call(paste,as.data.frame(rowvals))
-    tab
+    names(tab) <- do.call(paste,as.data.frame(rowvals))
+    unclass(tab)
 }
 
 ##' Mixture Component Probability from Stick Breaking
