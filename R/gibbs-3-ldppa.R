@@ -58,6 +58,7 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
     etas <- list()
     Vs <- list()
     alphas <- list()
+    zs <- list()
 
     ikeep <- 0
 
@@ -131,11 +132,13 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
 
         alpha <- loop$alpha
 
+        zsums <- rowSums(zy.tab)
+
         ## monitor
         vals <- c(
             alpha= logP.alpha(alpha,s),
             V= logP.V.alpha(V,alpha),
-            z= logP.ztab.v(rowSums(zy.tab),V),
+            z= logP.ztab.v(zsums,V),
             eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
             Y = logP.Y.eta.V(W,eta,V,omega,n,psi)
         )
@@ -145,8 +148,9 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
         etas[[i]] <- eta
         Vs[[i]] <- V
         alphas[[i]] <- alpha
+        zs[[i]] <- zsums
     }
 
 
-    list(monitors=monitors,etas=etas,Vs=Vs,alphas=alphas,call=sc)
+    list(monitors=monitors,etas=etas,Vs=Vs,alphas=alphas,zs=zs,call=sc)
 }
