@@ -27,7 +27,7 @@ lmass <- function(eta,V,nintervals=10,digits=NULL,V.is.z=FALSE){
         factor(do.call(paste,as.data.frame(roundSimplex(eta,1/nintervals))),
 	       lattice.levels)
     pr <- if (V.is.z) { # relative frequencies
-	      if ( V[ length(V) ] == 1.0)
+	      if ( V[ length(V) ] == 1.0 && max(V)==1.0)
                   warning("Second arg assumed to be z, but last element is 1.0")
 	      prop.table(V)
           } else {      # stick breaking probabilities
