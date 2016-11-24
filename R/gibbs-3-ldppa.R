@@ -20,6 +20,7 @@
 ##' @param nreps number of iteration groups to run after burn-in
 ##' @param nburn number of iterations to run before retaining samples
 ##' @param nthin iterate this many times between retaining values
+##' @param save.last logical.  If TRUE save all of the last iteration.
 ##' @return \code{list} with components \code{monitors} (recording
 ##'     components of the log posterior), \code{Vs} (values of V),
 ##'     \code{etas} (values of eta), and \code{call} (the call).
@@ -28,7 +29,8 @@
 ##' @importFrom utils head
 ##' @useDynLib LDppA
 ##' @author Charles Berry
-ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
+ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
+                          save.last=FALSE)
 {
     sc <- match.call()
     ## params
@@ -152,5 +154,6 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L)
     }
 
 
-    list(monitors=monitors,etas=etas,Vs=Vs,alphas=alphas,zs=zs,call=sc)
+    list(monitors=monitors,etas=etas,Vs=Vs,alphas=alphas,zs=zs,call=sc,
+         last=if (save.last) loop else NULL )
 }
