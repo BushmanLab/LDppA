@@ -30,7 +30,7 @@ rmulti <-
         res <- array(0L,dim(p))
         p0 <- 0
         for (i in 1:(ncol(p)-1)){
-            r <- rbinom(n,n,p[,i]/(1-p0))
+            r <- rbinom(length(n),n,p[,i]/(1-p0))
             res[,i] <- r
             n <- n - r
             p0 <- p0+p[,i]
