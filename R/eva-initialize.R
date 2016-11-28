@@ -1,13 +1,14 @@
 ##' Initialize Gibbs Sampler
 ##'
-##' Use maximum a posteriori estimates to initialize a Gibbs sampler.
-##' Find the maxima, cluster a sample of the values to find eta and V,
-##' then get alpha.
+##' Use approximate maximum a posteriori estimates to initialize a
+##' Gibbs sampler.  Find the maximum likelihood values, cluster a
+##' sample of the values to find eta and V, then get alpha.
 ##' @title eva.initialize
 ##' @param tab a \code{list} with elements \code{tab} a table of
 ##'     counts and \code{n} rowwise case weights for the table.
-##' @param omega the confusion matrix possibly scaled by the subsampling fractions.
-##' @param lambda Dirichlet paramter, usually the unit vector .
+##' @param omega the confusion matrix possibly scaled by the
+##'     subsampling fractions.
+##' @param lambda Dirichlet parameter, usually the unit vector .
 ##' @param k number of rows eta should contain
 ##' @param max.rows hard limit on number of rows to sample.
 ##' @return list with elements \code{eta}, \code{V}, and \code{alpha}.
