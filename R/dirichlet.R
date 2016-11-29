@@ -26,7 +26,7 @@ ddirichlet <-
 rmulti <-
     function(n,p){
         stopifnot(length(n)==nrow(p))
-        stopifnot(all(rowSums(p)==1.0))
+        stopifnot(all(abs(rowSums(p)-1.0)<1e-12))
         res <- array(0L,dim(p))
         p0 <- 0
         for (i in 1:(ncol(p)-1)){
