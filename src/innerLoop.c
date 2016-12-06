@@ -51,7 +51,7 @@ void zysum(
     for (int t=0;t<*T;t++){
       int one=1L;
       double x = (eps[0]==0) ? 0.0 :
-	dnbinom(wp[t],eps[0],eps[2]/(eps[2]+prw[t]),one);
+	dnbinom(wp[t],eps[0],eps[1]/(eps[1]+prw[t]),one);
       for (int k=0;k<*ko;k++) x+= log(etaomdp[t+k**T]/prw[t]) *
 				w[idat+k**ndat];
       if (biglog<x) biglog=x;
