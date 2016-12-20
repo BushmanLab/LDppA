@@ -1,3 +1,29 @@
+/*
+ *  innerLoop.c: A Gibbs Sampler for the LDppA Package
+ *  Copyright (C) 2016 Charles C. Berry <cberry@ucsd.edu>
+ *
+ *  This program is free software; you can redistribute it
+ *  and/or modify it under the terms of the GNU General
+ *  Public License as published by the Free Software
+ *  Foundation; either version 2 of the License, or (at your
+ *  option) any later version.
+ *
+ *  This program is distributed in the hope that it will be
+ *  useful, but WITHOUT ANY WARRANTY; without even the
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A
+ *  PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General
+ *  Public License along with this program; if not, a copy
+ *  is available at http://www.r-project.org/Licenses/
+ *  
+ *  This provides the function innerLoop and support
+ *  functions for it.  It is intended that this functon be
+ *  called by R.  See the R code and help pages for details
+ *  on setting up the objects used.
+ */
+
 #include <R.h>
 #include <Rmath.h>
 #include <R_ext/Random.h>
@@ -43,18 +69,16 @@ void zysum(
 	   double *etaomdp,
 	   double *workT
 	   ){
-#ifdef TESTING 
-  GetRNGstate();
-#endif
-
   for (int idat=0;idat<*ndat;idat++){
     double biglog=R_NegInf;
     for (int t=0;t<*T;t++){
       int one=1L;
-      // //* As per Equation \ref{eq:prwz3}. 
-      // Note: eps==0 is limiting case 
+      // //* Factor \ref{eq:prw.z5} to a multinomial times negative binomial
+      // Negative Binomial Part
+      // Note: eps==0 is limiting case
+      // Note: prob parm needs to be 1-nbparm given R convention
       double x = (eps[0]==0) ? 0.0 :
-	dnbinom(wp[t],eps[0],eps[1]/(eps[1]+prw[t]),one);
+	dnbinom(wp[t],eps[0],1-prw[t]/(eps[1]+prw[t]),one);
       for (int k=0;k<*ko;k++) x+= log(etaomdp[t+k**T]/prw[t]) *
 				w[idat+k**ndat];
       if (biglog<x) biglog=x;
@@ -65,13 +89,10 @@ void zysum(
       workT[t]=exp(workT[t]-biglog)*pz[t];
       prTot+=workT[t];
     }
-    // //* As per multinomial part of \ref{eq:prw.z}
+    // //* Multinomial part of \ref{eq:prw.z5}:
     for (int t=0;t<*T;t++) workT[t]/=prTot;
     rmultinom((int) n[idat],workT,(int) T[0], zy+idat**T);
   }  
-#ifdef TESTING
-  PutRNGstate();
-#endif
 }
 /* main entry point                    */
 /* run reps iterations of the sampler */
@@ -149,7 +170,8 @@ void innerLoop(
         rmultinom( (int) yz, eoy, *ka, xstmp);
         for (int k2=0;k2<*ka;k2++) xsums[t+k2**T]+=xstmp[k2];
       }
-      // //* Starting at \ref{eq:unseen}, see discussion
+      // Sampling unseen cells
+      // //*  See discussion in Section \ref{sec:unseen}
       for (int idat=0;idat<*ndat;idat++)
         seen+= (double) zy[t+idat**T] * (eps[0] + (double) wp[idat]);
       double nbparm = fmax2( 0.0, (1.0-prw[t])/(1.0+eps[1]) );
