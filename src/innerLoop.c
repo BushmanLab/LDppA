@@ -69,11 +69,12 @@ void zysum(
 	   double *etaomdp,
 	   double *workT
 	   ){
+  // //* Refer to Section \ref{sec:zdist}
   for (int idat=0;idat<*ndat;idat++){
     double biglog=R_NegInf;
     for (int t=0;t<*T;t++){
       int one=1L;
-      // //* Factor \ref{eq:prw.z5} to a multinomial times negative binomial
+      // //* Factor Equation \ref{eq:prw.z5} as multinomial times negative binomial
       // Negative Binomial Part
       // Note: eps==0 is limiting case
       // Note: prob parm needs to be 1-nbparm given R convention
@@ -89,7 +90,7 @@ void zysum(
       workT[t]=exp(workT[t]-biglog)*pz[t];
       prTot+=workT[t];
     }
-    // //* Multinomial part of \ref{eq:prw.z5}:
+    // //* Multinomial part of Equation \ref{eq:prw.z5}:
     for (int t=0;t<*T;t++) workT[t]/=prTot;
     rmultinom((int) n[idat],workT,(int) T[0], zy+idat**T);
   }  
@@ -148,10 +149,10 @@ void innerLoop(
     zysum(prw, pz, eps, eta, omdp, w, wp, n, T, ka, ko, ndat, zy, etaomdp, workT);
 
     /* xsums */
-
+    // //* See Section \ref{sec:effsamp} for Summation Tricks 
     for (int t=0;t<*T;t++){
       double seen=0.0;
-      // //* See discussion of \ref{eq:xobs} 
+      // //* See discussion of Equation \ref{eq:xobs} 
       for (int k=0;k<*ka;k++) xsums[t+k**T]=0;
       for (int k=0;k<*ko;k++) {
         /* yz is number of cells in cluster t, cell type k */
@@ -197,7 +198,7 @@ void innerLoop(
     /* eta */
 
     /* sample eta */
-    // //* As per \ref{eq:eta.xl}
+    // //* As per Equation \ref{eq:eta.xl}
     for (int t=0; t<*T; t++){
       double x=0.0;
       for (int k=0;k<*ka;k++){
@@ -230,7 +231,7 @@ void innerLoop(
 
     /* alpha */
 
-    // //* As per \ref{eq:alpha.r}
+    // //* As per Equation \ref{eq:alpha.r}
     double sumclog=0.0;
     for (int t=0; t<*T-1; t++) sumclog+=log(1.0-V[t]);
     alpha[0]=rgamma(s[0]+*T-1,1.0/(s[1]-sumclog));
