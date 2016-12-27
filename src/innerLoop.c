@@ -79,7 +79,7 @@ void zysum(
       // Note: eps==0 is limiting case
       // Note: prob parm needs to be 1-nbparm given R convention
       double x = (eps[0]==0) ? 0.0 :
-	dnbinom(wp[t],eps[0],1-prw[t]/(eps[1]+prw[t]),one);
+	dnbinom(wp[idat],eps[0],1-prw[t]/(eps[1]+prw[t]),one);
       for (int k=0;k<*ko;k++) x+= log(etaomdp[t+k**T]/prw[t]) *
 				w[idat+k**ndat];
       if (biglog<x) biglog=x;
