@@ -23,7 +23,6 @@
  *  called by R.  See the R code and help pages for details
  *  on setting up the objects used.
  */
-
 #include <R.h>
 #include <Rmath.h>
 #include <R_ext/Random.h>
