@@ -35,6 +35,7 @@
 ##'     fitting.
 ##' @return A table of counts in the format of \code{wttab()}
 ##' @importFrom stats dbinom pbinom model.matrix
+##' @export
 ##' @author Charles Berry
 simFromGibbs <-
     function(gibbs,params,iterate=NULL,wtab=NULL,
