@@ -24,16 +24,17 @@
 ##' The cell counts are rendered in the form given by \code{\link{wttab}}
 ##'
 ##' @title Mimic Data From Gibbs Sample
-##' @param gibbs The result of \code{\link{gibbs.ldppa.3}}, say.
-##' @param params A list such as used by \code{\link{gibbs.ldppa.3}}.
+##' @param gibbs The result of \code{\link{ldppa.gibbs.3}}, say.
+##' @param params A list such as used by \code{\link{ldppa.gibbs.3}}.
 ##' @param iterate Which iterate of the Gibbs sampler to use
-##' @param wtab The result of \code{\link{wttab()}}
+##' @param wtab The result of \code{\link{wttab}()}
 ##' @param simpars A list of \code{nr} the largest value to use as
 ##'     lower abundance, \code{nc} the largest number of observed
 ##'     cells to include among the lower abundance ISs, and
 ##'     \code{niter} the number of iterations to use in the EM
 ##'     fitting.
 ##' @return A table of counts in the format of \code{wttab()}
+##' @importFrom stats dbinom pbinom model.matrix
 ##' @author Charles Berry
 simFromGibbs <-
     function(gibbs,params,iterate=NULL,wtab=NULL,
