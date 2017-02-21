@@ -7,19 +7,16 @@
 ##' this out, the (zero truncated) distribution of counts of cells for
 ##' ISs sampled is required.
 ##'
-##' For lower abundance ISs, the distribution of sampled cell counts
-##' is developed using an EM algorithm.  The distribution of cells
-##' observed given the number sampled is binomial with a parameter
-##' determined by the composition, the confusion matrix, and the
-##' subsampling proportions.  The proportions are smoothed to temper
-##' issues with small cell counts.
+##' The distribution of sampled cell counts is developed using an EM
+##' algorithm.  The distribution of cells observed given the number
+##' sampled is binomial with a parameter determined by the
+##' composition, the confusion matrix, and the subsampling
+##' proportions. 
 ##'
 ##' Once the distribution is obtained, a sample of cells is drawn,
 ##' cells are assigned to cell types, they are \sQuote{sorted}, and
-##' subsampled.  For higher abundance ISs, the distribution of the
-##' number of cells is assumed to be locally flat, which leads to a
-##' negative binomial distribution with the complement of the binomial
-##' probability and one more success than the number of observed cells.
+##' subsampled.  The distribution of the number of cells is assumed to
+##' be a draw from the symmetric Dirichlet with unit vector as the parameter.
 ##'
 ##' The cell counts are rendered in the form given by \code{\link{wttab}}
 ##'
@@ -34,7 +31,7 @@
 ##'     \code{niter} the number of iterations to use in the EM
 ##'     fitting.
 ##' @return A table of counts in the format of \code{wttab()}
-##' @importFrom stats dbinom pbinom model.matrix
+##' @importFrom stats dbinom pbinom model.matrix qnbinom
 ##' @export
 ##' @author Charles Berry
 simFromGibbs <-
@@ -69,74 +66,54 @@ simFromGibbs <-
         wtab <- list(tab=matrix(last[["w"]],nrow=nrTab),
                      n=last[["n"]])    
     zmat <- matrix(last[["zy"]],nrow=nrEta)
-    wp.factor <- factor(pmin(last[["wp"]], nc+1L),
-                        1:(nc+1L))
+    wp.uniq <- unique(last[["wp"]])
+    wp.factor <- factor(last[["wp"]], wp.uniq)
     zcells <- zmat%*%unname(model.matrix(~0+wp.factor))
     pvec <- eta%*%params[["omega"]]%*%params[["psi"]]
 
-    ## fit distrn of low abundance sites
-    fit.z <-
-        function(p.obs,zc,nr,niter=simpars[["niter"]])
-    {
-        nc <- length(zc)
-        mat <-
-            t(sapply(1:nr,
-                     function(x) dbinom(1:nc,x,p.obs)))
-        m0 <- rowSums(mat)
-        po <- rep(1,nr)/nr
-        emat <- prop.table(diag(po)%*%mat,2)%*%diag(zc)
-        etot <- rowSums(emat)/m0
-        for (i in 1:niter){
-            po <- prop.table(etot+1)
-            emat <- prop.table(diag(po)%*%mat,2)%*%diag(zc)
-            etot <- rowSums(emat)/m0
-        }
-        emat
+    nonzero.eta <- which(rowSums(zcells)!=0)
+    samps <- lapply(nonzero.eta,
+                    function(i) samp.Mn(i,zcells,wp.uniq,pvec))
+
+    tab <- simW(samps,lapply(lengths(samps),seq_len),
+                eta[nonzero.eta,],params[["omega"]],params[["psi"]])
+    wttab(tab)
+}
+
+## sample M_n
+
+## note that conditioning on the observed cell counts allows use of the
+## negative binomial in place of binomial (conditioning on total counts)
+
+##' 
+samp.Mn <- function(ieta,zcells,wp.uniq,pvec,n.iter=10L){
+    p.obs <- pvec[ieta]
+    zvec <- zcells[ieta,]
+    wpvec <- wp.uniq[zvec>0]
+    zvec <- zvec[zvec>0]
+    ## truncate: do not bother with low probability events
+    max.i <- qnbinom(0.9999,max(wpvec)+1,p.obs)+max(wpvec)
+    pr.i <- rep(1/max.i,max.i)
+    adj.0 <- (1-p.obs)^seq_along(pr.i)/(1-(1-p.obs)^seq_along(pr.i))
+    for (iter in seq_len(n.iter)){
+        h.i0 <- rep(1,max.i)
+        for (i in seq_along(wpvec))
+            h.i0 <-
+                h.i0+
+                (1+adj.0)* zvec[i]*
+                prop.table(pr.i*dnbinom(seq_along(pr.i)-wp.uniq[i],
+                                        wp.uniq[i]+1,p.obs))
+        pr.i <- h.i0/sum(h.i0)
     }
-
-    fits <- lapply(1:nrEta,function(r) fit.z(pvec[r],zcells[r,-1-nc],nr))
-
-    nsampFun <- function(r){
-        n <- rowSums(apply(fits[[r]],2,
-                           function(x) {
-			       colsum <- round(sum(x))
-			       if (colsum!=0)
-                                   rmultinom(1,colsum,x)
-			       else
-                                   rep(0,length(x))}))
-        m <-
-            mapply(function(x,y)
-                if (x==0)
-                    x
-                else
-                    rnbinom(1,x,pbinom(0,y,pvec[r],lower.tail=FALSE)),
-                n,1:nr)
-        m+n
-    }
-
-    nsamp.reps <-
-        lapply(1:nrEta,nsampFun)                                                
-
-
-    smaller.tab <-
-        simW(nsamp.reps,
-             rep(list(1:nr),nrEta),
-             eta, params[["omega"]], params[["psi"]])
-
-    ## high abundance sites 
-    wp.bigger <- wp.factor == nc+1
-    wp.big.value <- last[["wp"]][wp.bigger]
-    zmat.big <- zmat[,wp.bigger]
-    zmat.counts <- zmat.big[zmat.big!=0]
-    zmat.etaRow <- row(zmat.big)[zmat.big!=0]
-    zmat.wp <- wp.big.value[col(zmat.big)[zmat.big!=0]]
-    bigger <- rnbinom(sum(zmat.counts),
-		      1+rep(zmat.wp,zmat.counts),
-		      rep(pvec[zmat.etaRow],zmat.counts)) +
-        rep(zmat.wp,zmat.counts)
-    Nsamps <- split(bigger,factor(rep(zmat.etaRow,zmat.counts),1:nrEta))
-
-    bigger.tab <- simW(lapply(Nsamps,function(x) rep(1,length(x))) ,
-		       Nsamps, eta, params[["omega"]], params[["psi"]])
-    wttab(rbind(smaller.tab,bigger.tab))
+    ## got pr.i
+    samps <- rowSums(
+        sapply(seq_along(wpvec),
+	       function(iwp){
+                   rmultinom(1, zvec[iwp],
+                             pr.i*
+                             dnbinom(seq_along(pr.i)-wp.uniq[iwp],
+                                     wp.uniq[iwp]+1,p.obs))
+	       }))
+    samp.0 <- rnbinom(max.i,h.i0/(1+adj.0),1-(1-p.obs)^seq_len(max.i))
+    samp.0+samps
 }
