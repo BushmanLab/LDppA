@@ -101,8 +101,8 @@ samp.Mn <- function(ieta,zcells,wp.uniq,pvec,n.iter=10L){
             h.i0 <-
                 h.i0+
                 (1+adj.0)* zvec[i]*
-                prop.table(pr.i*dnbinom(seq_along(pr.i)-wp.uniq[i],
-                                        wp.uniq[i]+1,p.obs))
+                prop.table(pr.i*dnbinom(seq_along(pr.i)-wpvec[i],
+                                        wpvec[i]+1,p.obs))
         pr.i <- h.i0/sum(h.i0)
     }
     ## got pr.i
