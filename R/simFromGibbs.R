@@ -111,8 +111,8 @@ samp.Mn <- function(ieta,zcells,wp.uniq,pvec,n.iter=10L){
 	       function(iwp){
                    rmultinom(1, zvec[iwp],
                              pr.i*
-                             dnbinom(seq_along(pr.i)-wp.uniq[iwp],
-                                     wp.uniq[iwp]+1,p.obs))
+                             dnbinom(seq_along(pr.i)-wpvec[iwp],
+                                     wpvec[iwp]+1,p.obs))
 	       }))
     samp.0 <- rnbinom(max.i,h.i0/(1+adj.0),1-(1-p.obs)^seq_len(max.i))
     samp.0+samps
