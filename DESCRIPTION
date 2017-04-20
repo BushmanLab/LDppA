@@ -1,19 +1,18 @@
 Package: LDppA
-Version: 0.99.33
-Date: 2017-03-02
+Version: 0.99.34
+Date: 2017-04-20
 Title: Latent Dirichlet Process Prior Allocation for Cell Type Compositions
 Author: Charles C. Berry [aut, cre]
 Maintainer: "Charles C. Berry" <cberry@ucsd.edu>
-Depends:
-    R (>= 3.1.0)
+Depends: R (>= 3.1.0)
 Description: Cell type compositions are estimated from gene
-    therapy data.  The data are in the form of a N by K table of
-    counts for number of cells in each of N cell lineages for which K
-    types are assessed.  The model uses a Dirchlet process prior that
-    has a Dirichlet distribution as its base.  The K cell types are
-    subject to misclassification and a confusion matrix must be given
-    a priori.
+   therapy data.  The data are in the form of a N by K table of
+   counts for number of cells in each of N cell lineages for which K
+   types are assessed.  The model uses a Dirchlet process prior that
+   has a Dirichlet distribution as its base.  The K cell types are
+   subject to misclassification and a confusion matrix must be given
+   a priori.
 License: GPL-3 | file LICENSE
 URL: https://github.com/BushmanLab/LDppA.git
 ByteCompile: TRUE
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

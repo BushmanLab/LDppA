@@ -19,7 +19,8 @@ eva.initialize <-
         eta.from.phi <-
             function(phi) c(1,exp(phi))/(1+sum(exp(phi)))
         argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
-            eta <- c(1,exp(phi))/(1+sum(exp(phi)))
+            log.eta <- c(0,phi)-max(0,phi)
+            eta <- exp(log.eta)/sum(exp(log.eta))
             eta.op <- eta%*%omega.psi
             eta.op <- eta.op/sum(eta.op)
             res <- dmultinom(w,prob=eta.op,log=TRUE)
