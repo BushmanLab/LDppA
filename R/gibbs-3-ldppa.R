@@ -142,7 +142,7 @@ ldppa.gibbs.3 <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
             V= logP.V.alpha(V,alpha),
             z= logP.ztab.v(zsums,V),
             eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
-            Y = logP.Y.eta.V(W,eta,V,omega,n,psi)
+            Y = logP.Y.eta.V(W,eta,V,omega,n,psi,eps)
         )
 
 
