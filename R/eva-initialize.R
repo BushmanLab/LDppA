@@ -11,11 +11,13 @@
 ##' @param lambda Dirichlet parameter, usually the unit vector .
 ##' @param k number of rows eta should contain
 ##' @param max.rows hard limit on number of rows to sample.
+##' @param cap.wt whether to truncate the number of single cell ISs to the
+##'     largest number of 2 cell ISs in sampling combinations
 ##' @return list with elements \code{eta}, \code{V}, and \code{alpha}.
 ##' @export
 ##' @author Charles Berry
 eva.initialize <-
-    function(tab,omega,lambda,k=NULL,max.rows=NULL) {
+    function(tab,omega,lambda,k=NULL,max.rows=NULL, cap.wt=TRUE) {
         eta.from.phi <-
             function(phi) c(1,exp(phi))/(1+sum(exp(phi)))
         argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
@@ -28,11 +30,13 @@ eva.initialize <-
         }
         y <- tab$tab
         wt <- tab$n
-        cells <- rowSums(y)*wt
+        cells <- rowSums(y)
+        boot.wt <-
+            if (cap.wt) pmin(wt, max(wt[cells>1])) else wt
         if (is.null(max.rows)) max.rows <-
                                    min(sum(wt),k*100)
         if (is.null(k)) k <- length(lambda)
-        boot.samp <- sample(nrow(y),max.rows,replace=TRUE,prob=wt)
+        boot.samp <- sample(nrow(y),max.rows,replace=TRUE,prob=boot.wt)
         rowvals <- apply(y,1,
                          function(x){
                              opt <- optim(rep(0,length(lambda)-1),
@@ -42,8 +46,7 @@ eva.initialize <-
                                           control=list(fnscale=-1))
                              eta.from.phi(opt$par)
                          })
-
-        y <- t(rowvals[,boot.samp])*cells[boot.samp]
+        y <- t(rowvals[,boot.samp])*(wt*cells)[boot.samp]
         ind <- cutree(hclust(dist(y)),k=k)
         tau <- unname(coef(lm(y~0+as.factor(ind)))+rep(lambda,each=k))
         eta <- prop.table(tau,1)
