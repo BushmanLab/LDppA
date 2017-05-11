@@ -1,6 +1,6 @@
 Package: LDppA
-Version: 0.99.37
-Date: 2017-05-10
+Version: 0.99.38
+Date: 2017-05-11
 Title: Latent Dirichlet Process Prior Allocation for Cell Type Compositions
 Author: Charles C. Berry [aut, cre]
 Maintainer: "Charles C. Berry" <cberry@ucsd.edu>

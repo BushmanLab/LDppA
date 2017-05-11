@@ -23,31 +23,7 @@
  *  called by R.  See the R code and help pages for details
  *  on setting up the objects used.
  */
-#include <R.h>
-#include <Rmath.h>
-#include <R_ext/Random.h>
-#include <R_ext/Print.h>
-#include <R_ext/BLAS.h>
-
-/* utils */
-
-static void matmult(double *x, int nrx, int ncx,
-		    double *y, int nry, int ncy, double *z)
-{
-  char *transa = "N", *transb = "N";
-  double one = 1.0, zero = 0.0;
-
-  F77_CALL(dgemm)(transa, transb, &nrx, &ncy, &ncx, &one,
-		  x, &nrx, y, &nry, &zero, z, &nrx);
-}
-
-void probzv( double *V, double *Z, int *T);
-void zysum(
-	   double *prw, double *pz, double *eps, double *eta,
-	   double *omdp, int *w, int *wp, int *n,
-	   int *T, int *ka, int *ko, int *ndat, int *zy,
-	   double *etaomdp, double *workT);
-
+#include "ectc.h"
 /* main entry point                    */
 /* run reps iterations of the sampler */
 

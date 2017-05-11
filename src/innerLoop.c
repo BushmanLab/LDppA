@@ -23,77 +23,7 @@
  *  called by R.  See the R code and help pages for details
  *  on setting up the objects used.
  */
-#include <R.h>
-#include <Rmath.h>
-#include <R_ext/Random.h>
-#include <R_ext/Print.h>
-#include <R_ext/BLAS.h>
-
-/* utils */
-
-static void matmult(double *x, int nrx, int ncx,
-		    double *y, int nry, int ncy, double *z)
-{
-  char *transa = "N", *transb = "N";
-  double one = 1.0, zero = 0.0;
-
-  F77_CALL(dgemm)(transa, transb, &nrx, &ncy, &ncx, &one,
-		  x, &nrx, y, &nry, &zero, z, &nrx);
-}
-
-// //* As per Equation \ref{eq:prz}
-void probzv( double *V, double *Z, int *T){
-  double usable=1.0;
-  for (int t = 0; t < *T; t++) {
-    Z[t]=V[t]*usable;
-    usable*=1-V[t];
-  }
-}
-void zysum(
-	   double *prw,
-	   double *pz,
-	   double *eps,
-	   double *eta,
-	   double *omdp,
-	   int *w,
-	   int *wp,
-	   int *n,
-	   int *T,
-	   int *ka,
-	   int *ko,
-	   int *ndat,
-	   /* result */
-	   int *zy,
-	   /* workspace */
-	   double *etaomdp,
-	   double *workT
-	   ){
-  // //* Refer to Section \ref{sec:zdist}
-  for (int idat=0;idat<*ndat;idat++){
-    double biglog=R_NegInf;
-    for (int t=0;t<*T;t++){
-      int one=1L;
-      // //* Factor Equation \ref{eq:prw.z5} as multinomial times negative binomial
-      // Negative Binomial Part
-      // Note: eps==0 is limiting case
-      // Note: prob parm needs to be 1-nbparm given R convention
-      double x = (eps[0]==0) ? 0.0 :
-	dnbinom(wp[idat],eps[0],1-prw[t]/(eps[1]+prw[t]),one);
-      for (int k=0;k<*ko;k++) x+= log(etaomdp[t+k**T]/prw[t]) *
-				w[idat+k**ndat];
-      if (biglog<x) biglog=x;
-      workT[t]=x;
-    }
-    double prTot=0.0;
-    for (int t=0;t<*T;t++){
-      workT[t]=exp(workT[t]-biglog)*pz[t];
-      prTot+=workT[t];
-    }
-    // //* Multinomial part of Equation \ref{eq:prw.z5}:
-    for (int t=0;t<*T;t++) workT[t]/=prTot;
-    rmultinom((int) n[idat],workT,(int) T[0], zy+idat**T);
-  }  
-}
+#include "ectc.h"
 /* main entry point                    */
 /* run reps iterations of the sampler */
 
