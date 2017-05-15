@@ -14,6 +14,7 @@
 ##' @param cap.wt whether to truncate the number of single cell ISs to the
 ##'     largest number of 2 cell ISs in sampling combinations
 ##' @return list with elements \code{eta}, \code{V}, and \code{alpha}.
+##' @importFrom stats cutree hclust dist coef lm optim
 ##' @export
 ##' @author Charles Berry
 eva.initialize <-

@@ -14,8 +14,8 @@
 ##' @export
 ##' @author Charles Berry
 ##' @examples
-##' loas(0, 3, 2)
-loas <-
+##' simplexGrid(0, 3, 2)
+simplexGrid <-
     function(from,to,times){
         times <- as.integer(times)
         stopifnot(times>=1,to>=from)
@@ -25,9 +25,9 @@ loas <-
         } else {
             res <-
                 sapply(from:to,
-                       function(x)
+		       function(x)
                            rbind(x,
-                                 loas(from=0,to=to-x,times=times-1L),
+                                 simplexGrid(from=0,to=to-x,times=times-1L),
                                  deparse.level=0))
             if (is.list(res)) do.call(cbind,res) else res
         }

@@ -5,31 +5,35 @@
 ##' @title Discrete Lattice Mass
 ##' @param eta M by \code{k+1} numeric matrix of composition
 ##'     probabilities
-##' @param V \code{ninterval} numeric vector of stick-breaking
-##'     probabilities.
+##' @param z integer or numeric vector of M
+##'     probabilities or counts giving the amount of mass associated
+##'     with each row of \code{eta}.
+##' @param V numeric vector of M stick-breaking
+##'     probabilities to be converted to a probability like \code{z}.
 ##' @param nintervals integer value giving number of intervals in each
 ##'     dimension.
 ##' @param digits integer giving number of trailing digits to use in
 ##'     labels.
-##' @param V.is.z logical, V argument is proportional to raw
-##'     probabilities rather than stick breaking probabilities.
-##' @return named vector of probabilities
+##' @return vector of probabilities named to indicate the lattice points.
 ##' @export
 ##' @importFrom stats xtabs
 ##' @author Charles Berry
-lmass <- function(eta,V,nintervals=10,digits=NULL,V.is.z=FALSE){
+massGrid <- function(eta,z,V,nintervals=10,digits=NULL){
     if (is.null(digits))
         digits <- if (nintervals%in%c(10,5,2)) 1 else 2
+    missing.z <- missing(z)
+    missing.V <- missing(V)
+    if (missing.z && missing.V) stop("Must specify either z or V argument")
     k <- ncol(eta)-1
     lattice.levels <-
-        do.call(paste,as.data.frame(t(loas(0,nintervals,k)/nintervals)))
+        do.call(paste,as.data.frame(t(simplexGrid(0,nintervals,k)/nintervals)))
     factor.eta <-
         factor(do.call(paste,as.data.frame(roundSimplex(eta,1/nintervals))),
 	       lattice.levels)
-    pr <- if (V.is.z) { # relative frequencies
-	      if ( V[ length(V) ] == 1.0 && max(V)==1.0)
+    pr <- if (missing.V) { # relative frequencies
+	      if ( z[ length(z) ] == 1.0 && max(z)==1.0)
                   warning("Second arg assumed to be z, but last element is 1.0")
-	      prop.table(V)
+	      prop.table(z)
           } else {      # stick breaking probabilities
 	      dZ.V(V)
           }
