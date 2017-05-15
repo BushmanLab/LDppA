@@ -28,7 +28,7 @@
 ##' @export
 ##' @importFrom stats rbeta rgamma rmultinom dnbinom rnbinom
 ##' @importFrom utils head
-##' @useDynLib LDppA
+##' @useDynLib ECTC
 ##' @author Charles Berry
 estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
                           save.last=FALSE,fix.eta=FALSE)
