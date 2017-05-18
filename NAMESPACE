@@ -2,6 +2,7 @@
 
 export(dZ.V)
 export(estimateComps)
+export(estimateMaxLik)
 export(eva.initialize)
 export(massGrid)
 export(rZ.W)

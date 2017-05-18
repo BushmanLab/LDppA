@@ -1,3 +1,93 @@
+##' Maximum Likelihood Estimation for the ECTC Model 
+##'
+##' Under the ECTC model given starting values for eta and V, expected
+##' values for \code{sum(Z==t)} and cell type counts given \code{Z}
+##' can be obtained.  The rows of eta then can be updated using
+##' maximum likelihood.
+##' @title estimateMaxLik
+##' @param V numeric vector of initial values for \code{V}. Last value
+##'     is 1.0.
+##' @param eta numeric matrix of initial values for \code{eta}.
+##' @param params list of hyperparameters with elements \code{omega},
+##'     and \code{psi}. Additional elments are ignored.
+##' @param tab the result of \code{\link{wttab}()}
+##' @param max.iter \code{integer} limiting iteration
+##' @param rel.step \code{numeric} value limiting iteration
+##' @param abs.step \code{numeric} value limiting iteration
+##' @export
+##' @importFrom stats optim dmultinom
+##' @return \code{list} with elements \code{logLik}, \code{eta},
+##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and \code{call}
+##' @author Charles Berry
+estimateMaxLik <-
+    function(
+             V,eta,params,tab,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
+{
+    mc <- match.call()
+    eta.from.phi <-
+        function(phi) c(1,exp(phi))/(1+sum(exp(phi)))
+    argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
+        log.eta <- c(0,phi)-max(0,phi)
+        eta <- exp(log.eta)/sum(exp(log.eta))
+        eta.op <- eta%*%omega.psi
+        eta.op <- eta.op/sum(eta.op)
+        res <- dmultinom(w,prob=eta.op,log=TRUE)
+        res
+    }
+    opt.fun <- function(i){
+        ## using good starting values helps speed and accuracy
+        ## using dumb starting values gives some negative updates
+        safe.eta <- prop.table(eta[i,]+1e-08)
+        opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
+                     argmax.llk,
+                     w=y[i,],
+                     omega=omega%*%diag(psi),
+                     control=list(fnscale=-1))
+        eta.from.phi(opt$par)
+    }
+    update.prob.z.w <-
+        function(prob.z,lik.zw)
+            prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
+    update.prob.z <-
+        function(prob.z.w,wt=tab)
+    {
+        ez.w <- as.vector( prob.z.w %*% wt$n)
+	prop.table(ez.w)
+    }
+    omega <- params$omega
+    psi <- params$psi
+    ## inits
+    eodp <- eta %*% omega %*% diag(psi)
+    eodcp <- eta %*% omega %*% diag(1-psi)
+    eop <- rowSums(eodp)
+    eodp <- eodp/eop
+    like.zw <- t(dmulti(tab$tab,eodp))
+    prob.z <- dZ.V(V)
+    ## updates
+    dllk <- Inf
+    llk <- -Inf
+    iter <- 0L
+    while (iter<max.iter && dllk >= min(abs.step,abs(rel.step * llk)))
+    {
+        iter <- iter + 1L
+        old.llk <- llk
+        prob.z.w <- update.prob.z.w(prob.z,like.zw)
+        prob.z <- update.prob.z(prob.z.w)
+        y <-  prob.z.w %*% (tab$tab*tab$n) 
+        rowvals <- sapply(1:nrow(y), opt.fun)
+        eta <- t(rowvals)
+        eodp <- eta %*% omega %*% diag(psi)
+        eodcp <- eta %*% omega %*% diag(1-psi)
+        eop <- rowSums(eodp)
+        eodp <- eodp/eop
+        like.zw <- t(dmulti(tab$tab,eodp))
+        llk <- sum(tab$n*log(prob.z%*%like.zw))
+        dllk <- llk-old.llk
+    }
+    V <- prob.z/rev(cumsum(rev(prob.z)))
+    list(logLik=llk,eta=eta,prob.z=prob.z,V=V,iter=iter,dllk=llk-old.llk,call=mc)
+}
+
 ##' MCMC Sampler for ECTC Model
 ##'
 ##' Under the ECTC model with subsampling given eta and V, z can be
