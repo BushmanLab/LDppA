@@ -76,3 +76,29 @@ logP.ztab.v <- function(ztab,v){
     ## unvectorized dmultinom() is OK here
     dmultinom(ztab,prob=pie,log=TRUE)
 }
+
+##' Sample eta Uniformly on a Simplex
+##'
+##' 
+##' @title reta 
+##' @param T number of rows of eta
+##' @param k number of cell types 
+##' @return matrix of \code{T} rows and \code{k} columns
+##' @export
+##' @importFrom stats rgamma
+##' @author Charles Berry
+reta <- function(T=10,k=5) prop.table(matrix(rgamma(k*T,1),ncol=k),1)
+
+##' Make stick breaking representation from probabilities
+##'
+##' 
+##' @title z.to.v
+##' @param z numeric vector of probabilities of exclusive events,
+##'     i.e. \code{all(z>=0) && sum(z)==1 }
+##' @return number vector of conditional probabilities, i.e. \code{cumprod(V)==z}
+##' @export
+##' @author Charles Berry
+z.to.v <- function(z){
+    stopifnot(abs(sum(z)-1.0)<sqrt(.Machine$double.eps))
+    z/rev(cumsum(rev(z)))
+}
