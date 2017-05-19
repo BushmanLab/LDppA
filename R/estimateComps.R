@@ -31,7 +31,7 @@ estimateMaxLik <-
         eta <- exp(log.eta)/sum(exp(log.eta))
         eta.op <- eta%*%omega.psi
         eta.op <- eta.op/sum(eta.op)
-        res <- dmultinom(w,prob=eta.op,log=TRUE)
+        res <- sum(w*log(eta.op))
         res
     }
     opt.fun <- function(i){
