@@ -34,12 +34,27 @@ estimateMaxLik <-
         res <- sum(w*log(eta.op))
         res
     }
+    dllk <- function(phi,w,omega.psi){
+        xp2 <- c(0,phi)
+        xp3 <- exp(xp2)
+        xp4 <- xp3/sum(xp3)
+        xp5 <- xp4%*%omega.psi
+        xp6 <- xp5/sum(xp5)
+        dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
+        dxp3.dxp2 <- diag(xp3)
+        dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
+        dxp5.dxp4 <- t(omega.psi)
+        dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
+        dxp7.dxp6 <- diag(1/as.vector(xp6))
+        dxp8.dxp7 <- matrix(w,nrow=1)
+        dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
+            dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
     opt.fun <- function(i){
         ## using good starting values helps speed and accuracy
         ## using dumb starting values gives some negative updates
         safe.eta <- prop.table(eta[i,]+1e-08)
         opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
-                     argmax.llk,
+                     argmax.llk,dllk,
                      w=y[i,],
                      omega=omega%*%diag(psi),
                      control=list(fnscale=-1))
