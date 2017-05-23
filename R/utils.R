@@ -62,13 +62,16 @@ dZ.V <- function(V){
     if (is.list(V)) V <- do.call(rbind,V)
     if (is.matrix(V)){
         nc <- ncol(V)
-        V* exp( log1p(-V[,-nc])%*%upper.tri(diag(nc))[-nc,] )
+        V* exp( log1p(-pmin(V[,-nc],1.0))%*%upper.tri(diag(nc))[-nc,] )
     } else {
         prob.z.v(V)
     }
 }
 
-prob.z.v <- function(v) v*exp(c(0,cumsum(log1p(-v)[-length(v)])))
+prob.z.v <- function(v) {
+    v <- pmin(1.0,v)
+    v*exp(c(0,cumsum(log1p(-v)[-length(v)])))
+}
 
 ##' @importFrom stats dmultinom
 logP.ztab.v <- function(ztab,v){

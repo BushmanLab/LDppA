@@ -4,7 +4,10 @@ logP.eta <- function(eta,lambda){
     sum(ddirichlet(eta,lambda,log.p=TRUE))
 }
 
-log.prob.v <- function(v) log(c(v,1))+c(0,cumsum(log1p(-v)))
+log.prob.v <- function(v){
+    v <- pmin(1,v)
+    log(c(v,1))+c(0,cumsum(log1p(-v)))
+}
 
 logP.V.alpha <- function(V,alpha){
     sum(dbeta(head(V,-1),1,alpha,log=TRUE))
