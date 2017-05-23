@@ -41,7 +41,7 @@ void probzv( double *V, double *Z, int *T){
   double usable=1.0;
   for (int t = 0; t < *T; t++) {
     Z[t]=V[t]*usable;
-    usable*=1-V[t];
+    usable*=fmax2(1-V[t],0.0);
   }
 }
 void zysum(
@@ -88,4 +88,32 @@ void zysum(
     for (int t=0;t<*T;t++) workT[t]/=prTot;
     rmultinom((int) n[idat],workT,(int) T[0], zy+idat**T);
   }  
+}
+// sample pz from dirichlet
+
+
+void samplePz(
+	      int *T,            // number of compositions
+	      int *ndat,         // number of data patterns
+	      double *alpha,     // prior for V
+	      int *zy,           // T by ndat table of assignments
+	      double *pz,        // prob Z = t
+	      double *workT     // workspace
+	      ){
+  // accum zsums
+	      
+  for (int i=0; i<*T; i++) workT[i]=*alpha;
+	      
+  for (int j=0; j<*ndat; j++)
+    for (int i=0; i<*T; i++) workT[i]+=(double) zy[i+*T*j];
+	      
+  double gsum=0.0;
+  for (int i=0; i<*T; i++){
+    pz[i] = rgamma(workT[i], 1.0);
+    gsum+=pz[i];
+  }
+	      
+  for (int i=0; i<*T; i++) pz[i]/=gsum;
+	      
+	      
 }

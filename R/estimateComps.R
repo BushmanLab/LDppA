@@ -127,6 +127,9 @@ estimateMaxLik <-
 ##' @param nthin iterate this many times between retaining values
 ##' @param save.last logical.  If TRUE save all of the last iteration.
 ##' @param fix.eta if \code{TRUE} do not update eta
+##' @param prob.Z.dirich if \code{TRUE} sample composition probability
+##'     by Dirichlet using \code{rep(alpha,nrow(eta))} as the
+##'     parameter
 ##' @return \code{list} with components \code{monitors} (recording
 ##'     components of the log posterior), \code{Vs} (values of V),
 ##'     \code{etas} (values of eta), and \code{call} (the call).
@@ -136,7 +139,7 @@ estimateMaxLik <-
 ##' @useDynLib ECTC
 ##' @author Charles Berry
 estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
-                          save.last=FALSE,fix.eta=FALSE)
+                          save.last=FALSE,fix.eta=FALSE,prob.Z.dirich=FALSE)
 {
     sc <- match.call()
     ## params
@@ -196,7 +199,8 @@ estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
                    workT=double(T),
                    xstmp=integer(ka),
                    xsums=integer(T*ka),
-                   fixeta=as.integer(fix.eta))
+                   fixeta=as.integer(fix.eta),
+                   pzdirich=as.integer(prob.Z.dirich))
         eta <- matrix(loop$eta,nrow=T)
         V <- loop$V
         alpha <- loop$alpha
@@ -230,7 +234,8 @@ estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
                    workT=double(T),
                    xstmp=integer(ka),
                    xsums=integer(T*ka),
-                   fixeta=as.integer(fix.eta))
+                   fixeta=as.integer(fix.eta),
+                   pzdirich=as.integer(prob.Z.dirich))
 
         zy.tab <- matrix(loop$zy,nrow=T)
         eta <- matrix(loop$eta,nrow=T)
