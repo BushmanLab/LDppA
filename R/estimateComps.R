@@ -11,6 +11,7 @@
 ##' @param params list of hyperparameters with elements \code{omega},
 ##'     and \code{psi}. Additional elments are ignored.
 ##' @param tab the result of \code{\link{wttab}()}
+##' @param alpha parameter for a Dirichlet prior on \code{dZ.V(V)} 
 ##' @param max.iter \code{integer} limiting iteration
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
@@ -21,7 +22,7 @@
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
-             V,eta,params,tab,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
+             V,eta,params,tab,alpha=0,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
 {
     mc <- match.call()
     eta.from.phi <-
@@ -64,9 +65,9 @@ estimateMaxLik <-
         function(prob.z,lik.zw)
             prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
     update.prob.z <-
-        function(prob.z.w,wt=tab)
+        function(prob.z.w,a=alpha,wt=tab)
     {
-        ez.w <- as.vector( prob.z.w %*% wt$n)
+        ez.w <- as.vector( prob.z.w %*% wt$n + a)
 	prop.table(ez.w)
     }
     omega <- params$omega
