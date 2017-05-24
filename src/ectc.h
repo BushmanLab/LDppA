@@ -12,3 +12,6 @@ void zysum(
 	   double *omdp, int *w, int *wp, int *n,
 	   int *T, int *ka, int *ko, int *ndat, int *zy,
 	   double *etaomdp, double *workT);
+
+void samplePz( int *T, int *ndat, double *alpha,
+	       int *zy, double *pz, double *workT);
