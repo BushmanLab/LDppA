@@ -53,7 +53,8 @@ void sampleCTC(
 	       double *workT,     // workspace
 	       int *xstmp,        // workspace
 	       int *xsums,        // T by ka table of counts
-	       int *fixeta	  // 1 == fix eta
+	       int *fixeta,	  // 1 == fix eta
+	       int *pzdirch	  // 1 == sample pz from dirichlet
 	       ){
 
   /* inits */
@@ -72,7 +73,7 @@ void sampleCTC(
 
     /* probzv */
 
-    probzv(V, pz, T);
+    if (*pzdirch==0 || irep==0) probzv(V, pz, T);
 
     /* zy */
 
@@ -145,27 +146,40 @@ void sampleCTC(
       /* V */
     }
 
-    // //* See Equations \ref{eq:V.Za}
-    V[*T-1L]=1.0;
-    for (int t=0;t<*T;t++){
-      int x=0.0;
-      for (int idat=0;idat<*ndat;idat++)
-        x+=zy[t+idat**T];
-      workT[t]= (double) x;
+    if (*pzdirch==0){
+      // //* See Equations \ref{eq:V.Za}
+      V[*T-1L]=1.0;
+      for (int t=0;t<*T;t++){
+	int x=0.0;
+	for (int idat=0;idat<*ndat;idat++)
+	  x+=zy[t+idat**T];
+	workT[t]= (double) x;
+      }
+      double zgt=*alpha+workT[*T-1];
+      for (int t=*T-2;t>=0;t--){
+	double beta=rbeta(1.0+workT[t],zgt);
+	V[t]= beta>0.99 ? 0.99 : beta;
+	zgt+=workT[t];
+      }
+
+      /* alpha */
+
+      // //* As per Equation \ref{eq:alpha.r}
+      double sumclog=0.0;
+      for (int t=0; t<*T-1; t++) sumclog+=log(1.0-V[t]);
+      alpha[0]=rgamma(s[0]+*T-1,1.0/(s[1]-sumclog));
     }
-    double zgt=*alpha+workT[*T-1];
-    for (int t=*T-2;t>=0;t--){
-      double beta=rbeta(1.0+workT[t],zgt);
-      V[t]= beta>0.99 ? 0.99 : beta;
-      zgt+=workT[t];
+    else {
+      samplePz(T, ndat, alpha, zy, pz, workT);
+      double przleft=0.0;
+      for (int t = 0; t<(*T-1L); t++){
+	V[t]=pz[t]/(1.0-przleft);
+	przleft+=pz[t];
+      }
+      V[*T-1L]=1.0;
+
     }
 
-    /* alpha */
-
-    // //* As per Equation \ref{eq:alpha.r}
-    double sumclog=0.0;
-    for (int t=0; t<*T-1; t++) sumclog+=log(1.0-V[t]);
-    alpha[0]=rgamma(s[0]+*T-1,1.0/(s[1]-sumclog));
 
   }
   /* fini */
