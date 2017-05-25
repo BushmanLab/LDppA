@@ -170,7 +170,8 @@ void sampleCTC(
       alpha[0]=rgamma(s[0]+*T-1,1.0/(s[1]-sumclog));
     }
     else {
-      samplePz(T, ndat, alpha, zy, pz, workT);
+      double alfdivT = alpha[0]/T[0];
+      samplePz(T, ndat, &alfdivT, zy, pz, workT);
       double przleft=0.0;
       for (int t = 0; t<(*T-1L); t++){
 	V[t] = (przleft<1.0) ? pz[t]/(1.0-przleft) : 1.0;

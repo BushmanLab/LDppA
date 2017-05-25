@@ -15,6 +15,7 @@
 ##' @param max.iter \code{integer} limiting iteration
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
+##' @param alpha.max upper limit of \code{alpha}
 ##' @export
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
@@ -22,7 +23,8 @@
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
-             V,eta,alpha=0,params,tab,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
+             V,eta,alpha=0,params,tab,max.iter=500L,
+             rel.step=1e-06,abs.step=1e-3,alpha.max=1.0)
 {
     mc <- match.call()
     eta.from.phi <-
@@ -65,16 +67,16 @@ estimateMaxLik <-
         function(prob.z,lik.zw)
             prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
     update.prob.z <-
-        function(prob.z.w,a=alpha,wt=tab)
+        function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
-        ez.w <- as.vector( prob.z.w %*% wt$n + a)
+        ez.w <- as.vector( prob.z.w %*% wt$n + a/kv)
 	prop.table(ez.w)
     }
     update.alpha <-
-        function(prob.z){
+        function(prob.z,kv=k){
             optimize(
-                function(x) ddirichlet(prob.z,rep(alpha,k),log.p=TRUE),
-                c(0.0,1.0),maximum=TRUE)
+                function(x) ddirichlet(prob.z,rep(x/kv,kv),log.p=TRUE),
+                c(0.0,kv*alpha.max),maximum=TRUE)
         }
     omega <- params$omega
     psi <- params$psi
