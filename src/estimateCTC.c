@@ -173,8 +173,8 @@ void sampleCTC(
       samplePz(T, ndat, alpha, zy, pz, workT);
       double przleft=0.0;
       for (int t = 0; t<(*T-1L); t++){
-	V[t]=pz[t]/(1.0-przleft);
-	przleft+=pz[t];
+	V[t] = (przleft<1.0) ? pz[t]/(1.0-przleft) : 1.0;
+	przleft += pz[t];
       }
       V[*T-1L]=1.0;
 
