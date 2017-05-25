@@ -14,11 +14,16 @@ rdirichlet <-
 ddirichlet <-
     function(q,lam,log.p=FALSE)
 {
-    res <- rowSums((lam-1)*log(q)) +
-        if (is.matrix(lam))
-            lgamma(rowSums(lam))-rowSums(lgamma(lam))
-        else
-            lgamma(sum(lam))-sum(lgamma(lam))
+    res <- 
+        if (is.matrix(q)){
+            stopifnot(length(lam)==ncol(q))
+            (lam-1)%*%t(log(q)) +
+                lgamma(sum(lam))-sum(lgamma(lam))
+        } else {
+            stopifnot(length(lam)==length(q))
+            sum((lam-1)*log(q))+
+                lgamma(sum(lam))-sum(lgamma(lam))
+        }
     if (log.p) res else exp(res)
 }
 
