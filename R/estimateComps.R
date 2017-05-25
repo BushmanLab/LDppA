@@ -8,21 +8,21 @@
 ##' @param V numeric vector of initial values for \code{V}. Last value
 ##'     is 1.0.
 ##' @param eta numeric matrix of initial values for \code{eta}.
+##' @param alpha parameter for a Dirichlet prior on \code{dZ.V(V)} 
 ##' @param params list of hyperparameters with elements \code{omega},
 ##'     and \code{psi}. Additional elments are ignored.
 ##' @param tab the result of \code{\link{wttab}()}
-##' @param alpha parameter for a Dirichlet prior on \code{dZ.V(V)} 
 ##' @param max.iter \code{integer} limiting iteration
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
 ##' @export
-##' @importFrom stats optim dmultinom
+##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
 ##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and \code{call}
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
-             V,eta,params,tab,alpha=0,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
+             V,eta,alpha=0,params,tab,max.iter=500L,rel.step=1e-06,abs.step=1e-3)
 {
     mc <- match.call()
     eta.from.phi <-
@@ -70,8 +70,15 @@ estimateMaxLik <-
         ez.w <- as.vector( prob.z.w %*% wt$n + a)
 	prop.table(ez.w)
     }
+    update.alpha <-
+        function(prob.z){
+            optimize(
+                function(x) ddirichlet(prob.z,rep(alpha,k),log.p=TRUE),
+                c(0.0,1.0),maximum=TRUE)
+        }
     omega <- params$omega
     psi <- params$psi
+    k <- nrow(eta)
     ## inits
     eodp <- eta %*% omega %*% diag(psi)
     eodcp <- eta %*% omega %*% diag(1-psi)
@@ -79,6 +86,9 @@ estimateMaxLik <-
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp))
     prob.z <- dZ.V(V)
+    if (alpha!=0) {
+        alpha <- update.alpha(prob.z)$maximum
+    }
     ## updates
     dllk <- Inf
     llk <- -Inf
@@ -89,6 +99,11 @@ estimateMaxLik <-
         old.llk <- llk
         prob.z.w <- update.prob.z.w(prob.z,like.zw)
         prob.z <- update.prob.z(prob.z.w)
+        if (alpha!=0) {
+            uap <- update.alpha(prob.z)
+            alpha <- uap$maximum
+            alphallk <- uap$objective
+        }
         y <-  prob.z.w %*% (tab$tab*tab$n) 
         rowvals <- sapply(1:nrow(y), opt.fun)
         eta <- t(rowvals)
@@ -100,8 +115,10 @@ estimateMaxLik <-
         llk <- sum(tab$n*log(prob.z%*%like.zw))
         dllk <- llk-old.llk
     }
+    if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
-    list(logLik=llk,eta=eta,prob.z=prob.z,V=V,iter=iter,dllk=llk-old.llk,call=mc)
+    list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
+         dllk=llk-old.llk,alpha.llk=alphallk,call=mc)
 }
 
 ##' MCMC Sampler for ECTC Model
