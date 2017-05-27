@@ -19,8 +19,6 @@
 ##' @author Charles Berry
 eva.initialize <-
     function(tab,omega,lambda,k=NULL,max.rows=NULL, cap.wt=TRUE) {
-        eta.from.phi <-
-            function(phi) c(1,exp(phi))/(1+sum(exp(phi)))
         argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
             log.eta <- c(0,phi)-max(0,phi)
             eta <- exp(log.eta)/sum(exp(log.eta))

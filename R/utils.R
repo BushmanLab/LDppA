@@ -80,6 +80,11 @@ logP.ztab.v <- function(ztab,v){
     dmultinom(ztab,prob=pie,log=TRUE)
 }
 
+eta.from.phi <- function(phi){
+    log.eta <- c(0,phi)-max(0,phi)
+    exp(log.eta)/sum(exp(log.eta))    
+}
+
 ##' Sample eta Uniformly on a Simplex
 ##'
 ##' 
