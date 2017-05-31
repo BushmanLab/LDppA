@@ -15,7 +15,7 @@
 ##' @param max.iter \code{integer} limiting iteration
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
-##' @param alpha.max upper limit of \code{alpha}
+##' @param alpha.max upper limit of \code{alpha/nrow(eta)}
 ##' @export
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
@@ -23,59 +23,65 @@
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
-             V,eta,alpha=0,params,tab,max.iter=500L,
-             rel.step=1e-06,abs.step=1e-3,alpha.max=1.0)
+	     V,eta,alpha=0,params,tab,max.iter=500L,
+	     rel.step=1e-06,abs.step=1e-3,alpha.max=1.0)
 {
     mc <- match.call()
     argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
-        log.eta <- c(0,phi)-max(0,phi)
-        eta <- exp(log.eta)/sum(exp(log.eta))
-        eta.op <- eta%*%omega.psi
-        eta.op <- eta.op/sum(eta.op)
-        res <- sum(w*log(eta.op))
-        res
+	log.eta <- c(0,phi)-max(0,phi)
+	eta <- exp(log.eta)/sum(exp(log.eta))
+	eta.op <- eta%*%omega.psi
+	eta.op <- eta.op/sum(eta.op)
+	res <- sum(w*log(eta.op))
+	res
     }
     dllk <- function(phi,w,omega.psi){
-        xp2 <- c(0,phi)
-        xp3 <- exp(xp2)
-        xp4 <- xp3/sum(xp3)
-        xp5 <- xp4%*%omega.psi
-        xp6 <- xp5/sum(xp5)
-        dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
-        dxp3.dxp2 <- diag(xp3)
-        dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
-        dxp5.dxp4 <- t(omega.psi)
-        dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
-        dxp7.dxp6 <- diag(1/as.vector(xp6))
-        dxp8.dxp7 <- matrix(w,nrow=1)
-        dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
-            dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
+	xp2 <- c(0,phi)
+	xp3 <- exp(xp2)
+	xp4 <- xp3/sum(xp3)
+	xp5 <- xp4%*%omega.psi
+	xp6 <- xp5/sum(xp5)
+	dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
+	dxp3.dxp2 <- diag(xp3)
+	dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
+	dxp5.dxp4 <- t(omega.psi)
+	dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
+	dxp7.dxp6 <- diag(1/as.vector(xp6))
+	dxp8.dxp7 <- matrix(w,nrow=1)
+	dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
+	    dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
     opt.fun <- function(i){
-        ## using good starting values helps speed and accuracy
-        ## using dumb starting values gives some negative updates
-        safe.eta <- prop.table(eta[i,]+1e-08)
-        opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
-                     argmax.llk,dllk,
-                     w=y[i,],
-                     omega=omega%*%diag(psi),
-                     control=list(fnscale=-1))
-        eta.from.phi(opt$par)
+	## using good starting values helps speed and accuracy
+	## using dumb starting values gives some negative updates
+	safe.eta <- prop.table(eta[i,]+1e-08)
+	opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
+		     argmax.llk,dllk,
+		     w=y[i,],
+		     omega=omega%*%diag(psi),
+		     control=list(fnscale=-1))
+	eta.from.phi(opt$par)
     }
     update.prob.z.w <-
-        function(prob.z,lik.zw)
-            prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
+	function(prob.z,lik.zw)
+	    prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
     update.prob.z <-
-        function(prob.z.w,a=alpha,kv=k,wt=tab)
+	function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
-        ez.w <- as.vector( prob.z.w %*% wt$n + a/kv)
-	prop.table(ez.w)
+	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - 1)
+	prop.table(pmax(0,ez.w))
+    }
+    ldmn <- function(alpha,x){
+	k <- length(x)
+	n <- sum(x)
+	lgamma(k*alpha) + lfactorial(n) - lgamma(n+k*alpha) +
+	    sum(lgamma(x+alpha)) - sum(lfactorial(x)) - k*lgamma(alpha)
     }
     update.alpha <-
-        function(prob.z,kv=k){
-            optimize(
-                function(x) ddirichlet(prob.z,rep(x/kv,kv),log.p=TRUE),
-                c(0.0,kv*alpha.max),maximum=TRUE)
-        }
+	function(ex){
+	    optimize(
+		function(x) ldmn(x,ex),
+		c(0.0,alpha.max),maximum=TRUE)
+	}
     omega <- params$omega
     psi <- params$psi
     k <- nrow(eta)
@@ -87,7 +93,10 @@ estimateMaxLik <-
     like.zw <- t(dmulti(tab$tab,eodp))
     prob.z <- dZ.V(V)
     if (alpha!=0) {
-        alpha <- update.alpha(prob.z)$maximum
+	prob.z.w <- update.prob.z.w(prob.z,like.zw)
+	prob.z <- update.prob.z(prob.z.w)
+	ex <- prob.z.w %*% tab$n
+	alpha <- update.alpha(prob.z)$maximum * k # like Dir(alpha/N,...)
     }
     ## updates
     dllk <- Inf
@@ -95,30 +104,31 @@ estimateMaxLik <-
     iter <- 0L
     while (iter<max.iter && dllk >= min(abs.step,abs(rel.step * llk)))
     {
-        iter <- iter + 1L
-        old.llk <- llk
-        prob.z.w <- update.prob.z.w(prob.z,like.zw)
-        prob.z <- update.prob.z(prob.z.w)
-        if (alpha!=0) {
-            uap <- update.alpha(prob.z)
-            alpha <- uap$maximum
-            alphallk <- uap$objective
-        }
-        y <-  prob.z.w %*% (tab$tab*tab$n) 
-        rowvals <- sapply(1:nrow(y), opt.fun)
-        eta <- t(rowvals)
-        eodp <- eta %*% omega %*% diag(psi)
-        eodcp <- eta %*% omega %*% diag(1-psi)
-        eop <- rowSums(eodp)
-        eodp <- eodp/eop
-        like.zw <- t(dmulti(tab$tab,eodp))
-        llk <- sum(tab$n*log(prob.z%*%like.zw))
-        dllk <- llk-old.llk
+	iter <- iter + 1L
+	old.llk <- llk
+	prob.z.w <- update.prob.z.w(prob.z,like.zw)
+	prob.z <- update.prob.z(prob.z.w)
+	if (alpha!=0) {
+	    ex <- prob.z.w %*% tab$n
+	    uap <- update.alpha(ex)
+	    alpha <- uap$maximum * k # like Dir(alpha/N,...)
+	    alphallk <- uap$objective
+	}
+	y <-  prob.z.w %*% (tab$tab*tab$n) 
+	rowvals <- sapply(1:nrow(y), opt.fun)
+	eta <- t(rowvals)
+	eodp <- eta %*% omega %*% diag(psi)
+	eodcp <- eta %*% omega %*% diag(1-psi)
+	eop <- rowSums(eodp)
+	eodp <- eodp/eop
+	like.zw <- t(dmulti(tab$tab,eodp))
+	llk <- sum(tab$n*log(prob.z%*%like.zw))
+	dllk <- llk-old.llk
     }
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
     list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
-         dllk=llk-old.llk,alpha.llk=alphallk,call=mc)
+	 dllk=llk-old.llk,alpha.llk=alphallk,call=mc)
 }
 
 ##' MCMC Sampler for ECTC Model
