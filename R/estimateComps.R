@@ -1,14 +1,19 @@
-##' Maximum Likelihood Estimation for the ECTC Model 
+##' Maximum Likelihood or Posterior Estimation for the ECTC Model 
 ##'
 ##' Under the ECTC model given starting values for eta and V, expected
-##' values for \code{sum(Z==t)} and cell type counts given \code{Z}
-##' can be obtained.  The rows of eta then can be updated using
-##' maximum likelihood.
+##' values for \code{sum(Z==t)}.  Maximum likelihood or maximum
+##' posterior estimates of cell type counts given \code{Z} and of eta
+##' then can be obtained.  The value of \code{alpha} (if not
+##' initialized to zero) is obtained by maximizing the posterior.  As
+##' such, this qualifies as an empirical Bayes approach.
 ##' @title estimateMaxLik
 ##' @param V numeric vector of initial values for \code{V}. Last value
 ##'     is 1.0.
 ##' @param eta numeric matrix of initial values for \code{eta}.
-##' @param alpha parameter for a Dirichlet prior on \code{dZ.V(V)} 
+##' @param alpha If \code{alpha==0.0} maximum likelihood estimates
+##'     will be obtained. if non-zero, \code{rep(alpha/nrow(eta),
+##'     nrow(eta))} is the initial value of the parameter for a
+##'     Dirichlet prior on \code{prob.z} (aka \code{dZ.V(V)}).
 ##' @param params list of hyperparameters with elements \code{omega},
 ##'     and \code{psi}. Additional elments are ignored.
 ##' @param tab the result of \code{\link{wttab}()}
@@ -19,7 +24,8 @@
 ##' @export
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
-##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and \code{call}
+##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and
+##'     \code{call}
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
@@ -67,7 +73,7 @@ estimateMaxLik <-
     update.prob.z <-
 	function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
-	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - 1)
+	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - if (a==0) 0 else 1 )
 	prop.table(pmax(0,ez.w))
     }
     ldmn <- function(alpha,x){
