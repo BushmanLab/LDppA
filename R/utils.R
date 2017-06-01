@@ -108,5 +108,8 @@ reta <- function(T=10,k=5) prop.table(matrix(rgamma(k*T,1),ncol=k),1)
 ##' @author Charles Berry
 z.to.v <- function(z){
     stopifnot(abs(sum(z)-1.0)<sqrt(.Machine$double.eps))
-    z/rev(cumsum(rev(z)))
+    denom <- rev(cumsum(rev(z)))
+    res <- z/denom
+    res[denom==0] <- 0.0
+    res
 }
