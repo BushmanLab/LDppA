@@ -173,18 +173,26 @@ estimateMaxLik <-
 ##' @useDynLib ECTC
 ##' @author Charles Berry
 estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
-                          save.last=FALSE,fix.eta=FALSE,prob.Z.dirich=FALSE)
+			  save.last=FALSE,fix.eta=FALSE,prob.Z.dirich=FALSE)
 {
     sc <- match.call()
     ## params
+    T <- nrow(eta)
+    stopifnot(length(V)==T)
     omega <- params$omega
     lamb <- params$lambda
     s <- params$s
+    stopifnot(length(s)==2)
     eps <- params$epsilon
+    stopifnot(length(eps)==2)
     psi <- params$psi
     K <- ncol(tab$tab)
+    stopifnot(length(psi)==K)
+    stopifnot(length(lamb)==K)
+    stopifnot(nrow(omega)==K)
+    stopifnot(ncol(omega)==K)
+    stopifnot(ncol(eta)==K)
     ka <- ko <- K
-    T <- nrow(eta)
     ## `y' is used below where `W' might have better mnemonic
     ## meaning. This is a legacy of code written before subsampling was
     ## taken into account.
@@ -193,6 +201,7 @@ estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
     Nw <- length(Wplus)
     n <- tab$n
     ndat <- as.integer(nrow(W))
+    stopifnot(ndat==length(n))
     ## calc once
     omPsi <- omega%*%psi
     omDPsi <- omega%*%diag(psi)
@@ -208,90 +217,90 @@ estimateComps <- function(V,eta,alpha,params,tab, nreps=1L, nburn=0L, nthin=1L,
     ikeep <- 0
 
     if (nburn>0){
-        loop <- .C("sampleCTC",
-                   reps=as.integer(nburn),
-                   T=as.integer(T),
-                   ka=as.integer(K),
-                   ko=as.integer(K),
-                   n=as.integer(n),
-                   ndat=as.integer(ndat),
-                   w=as.integer(W),
-                   wp=as.integer(Wplus),
-                   s=as.double(s),
-                   lamb=as.double(lamb),
-                   omcp=as.double(omCPsi),
-                   omdp=as.double(omDPsi),
-                   eps=as.double(eps),
-                   V=as.double(V),
-                   alpha=as.double(alpha),
-                   eta=as.double(eta),
-                   zy=integer(T*ndat),
-                   eoy=double(ka),
-                   etaomdp=double(T*ka),
-                   prw=double(T),
-                   pz=double(T),
-                   workT=double(T),
-                   xstmp=integer(ka),
-                   xsums=integer(T*ka),
-                   fixeta=as.integer(fix.eta),
-                   pzdirich=as.integer(prob.Z.dirich))
-        eta <- matrix(loop$eta,nrow=T)
-        V <- loop$V
-        alpha <- loop$alpha
+	loop <- .C("sampleCTC",
+		   reps=as.integer(nburn),
+		   T=as.integer(T),
+		   ka=as.integer(K),
+		   ko=as.integer(K),
+		   n=as.integer(n),
+		   ndat=as.integer(ndat),
+		   w=as.integer(W),
+		   wp=as.integer(Wplus),
+		   s=as.double(s),
+		   lamb=as.double(lamb),
+		   omcp=as.double(omCPsi),
+		   omdp=as.double(omDPsi),
+		   eps=as.double(eps),
+		   V=as.double(V),
+		   alpha=as.double(alpha),
+		   eta=as.double(eta),
+		   zy=integer(T*ndat),
+		   eoy=double(ka),
+		   etaomdp=double(T*ka),
+		   prw=double(T),
+		   pz=double(T),
+		   workT=double(T),
+		   xstmp=integer(ka),
+		   xsums=integer(T*ka),
+		   fixeta=as.integer(fix.eta),
+		   pzdirich=as.integer(prob.Z.dirich))
+	eta <- matrix(loop$eta,nrow=T)
+	V <- loop$V
+	alpha <- loop$alpha
     }
 
 
     for (i in 1:nreps){
 
-        loop <- .C("sampleCTC",
-                   reps=as.integer(nthin),
-                   T=as.integer(T),
-                   ka=as.integer(K),
-                   ko=as.integer(K),
-                   n=as.integer(n),
-                   ndat=as.integer(ndat),
-                   w=as.integer(W),
-                   wp=as.integer(Wplus),
-                   s=as.double(s),
-                   lamb=as.double(lamb),
-                   omcp=as.double(omCPsi),
-                   omdp=as.double(omDPsi),
-                   eps=as.double(eps),
-                   V=as.double(V),
-                   alpha=as.double(alpha),
-                   eta=as.double(eta),
-                   zy=integer(T*ndat),
-                   eoy=double(ka),
-                   etaomdp=double(T*ka),
-                   prw=double(T),
-                   pz=double(T),
-                   workT=double(T),
-                   xstmp=integer(ka),
-                   xsums=integer(T*ka),
-                   fixeta=as.integer(fix.eta),
-                   pzdirich=as.integer(prob.Z.dirich))
+	loop <- .C("sampleCTC",
+		   reps=as.integer(nthin),
+		   T=as.integer(T),
+		   ka=as.integer(K),
+		   ko=as.integer(K),
+		   n=as.integer(n),
+		   ndat=as.integer(ndat),
+		   w=as.integer(W),
+		   wp=as.integer(Wplus),
+		   s=as.double(s),
+		   lamb=as.double(lamb),
+		   omcp=as.double(omCPsi),
+		   omdp=as.double(omDPsi),
+		   eps=as.double(eps),
+		   V=as.double(V),
+		   alpha=as.double(alpha),
+		   eta=as.double(eta),
+		   zy=integer(T*ndat),
+		   eoy=double(ka),
+		   etaomdp=double(T*ka),
+		   prw=double(T),
+		   pz=double(T),
+		   workT=double(T),
+		   xstmp=integer(ka),
+		   xsums=integer(T*ka),
+		   fixeta=as.integer(fix.eta),
+		   pzdirich=as.integer(prob.Z.dirich))
 
-        zy.tab <- matrix(loop$zy,nrow=T)
-        eta <- matrix(loop$eta,nrow=T)
-        V <- loop$V
-        alpha <- loop$alpha
-        zsums <- rowSums(zy.tab)
-        ## monitors
-        vals <- c(
+	zy.tab <- matrix(loop$zy,nrow=T)
+	eta <- matrix(loop$eta,nrow=T)
+	V <- loop$V
+	alpha <- loop$alpha
+	zsums <- rowSums(zy.tab)
+	## monitors
+	vals <- c(
             alpha= logP.alpha(alpha,s),
             V= logP.V.alpha(V,alpha),
             z= logP.ztab.v(zsums,V),
             eta = logP.eta(eta,lamb), ## (lambda == 1) ==> constant
             Y = logP.Y.eta.V(W,eta,V,omega,n,psi,eps)
-        )
+	)
 
-        monitors[[i]] <- vals
-        etas[[i]] <- eta
-        Vs[[i]] <- V
-        alphas[[i]] <- alpha
-        zs[[i]] <- zsums
+	monitors[[i]] <- vals
+	etas[[i]] <- eta
+	Vs[[i]] <- V
+	alphas[[i]] <- alpha
+	zs[[i]] <- zsums
     }
 
     list(monitors=monitors,etas=etas,Vs=Vs,alphas=alphas,zs=zs,call=sc,
-         last=if (save.last) loop else NULL )
+	 last=if (save.last) loop else NULL )
 }
