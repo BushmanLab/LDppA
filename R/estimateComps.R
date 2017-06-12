@@ -1,4 +1,4 @@
-##' Maximum Likelihood or Posterior Estimation for the ECTC Model 
+t##' Maximum Likelihood or Posterior Estimation for the ECTC Model 
 ##'
 ##' Under the ECTC model given starting values for eta and V, expected
 ##' values for \code{sum(Z==t)}.  Maximum likelihood or maximum
@@ -41,7 +41,7 @@ estimateMaxLik <-
 	res <- sum(w*log(eta.op))
 	res
     }
-    dllk <- function(phi,w,omega.psi){
+    dllkdphi <- function(phi,w,omega.psi){
 	xp2 <- c(0,phi)
 	xp3 <- exp(xp2)
 	xp4 <- xp3/sum(xp3)
@@ -61,12 +61,22 @@ estimateMaxLik <-
 	## using dumb starting values gives some negative updates
 	safe.eta <- prop.table(eta[i,]+1e-08)
 	opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
-		     argmax.llk,dllk,
+		     argmax.llk,dllkdphi,
 		     w=y[i,],
 		     omega=omega%*%diag(psi),
 		     control=list(fnscale=-1))
 	eta.from.phi(opt$par)
     }
+    all.derivs <- function(y,eta,omega,psi){
+	op <- omega%*%diag(psi)
+	safe.eta <- prop.table(eta+1e-08,1)
+	log.safe.eta <- log(safe.eta[,-1,drop=FALSE])-log(safe.eta[,1])
+	ne <- nrow(eta)
+	ny <- nrow(y)
+	sapply(1:ne, function(i){
+	    dde <- sapply(1:ny,
+			  function(j) dllkdphi(log.safe.eta[i,],y[j,],op))
+	    rowSums(dde)})}
     update.prob.z.w <-
 	function(prob.z,lik.zw)
 	    prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
@@ -74,7 +84,7 @@ estimateMaxLik <-
 	function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
 	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - if (a==0) 0 else 1 )
-	prop.table(pmax(0,ez.w))
+	prop.table(pmax(1e-12,ez.w))
     }
     ldmn <- function(alpha,x){
 	k <- length(x)
@@ -96,7 +106,7 @@ estimateMaxLik <-
     eodcp <- eta %*% omega %*% diag(1-psi)
     eop <- rowSums(eodp)
     eodp <- eodp/eop
-    like.zw <- t(dmulti(tab$tab,eodp))
+    like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
     prob.z <- dZ.V(V)
     if (alpha!=0) {
 	prob.z.w <- update.prob.z.w(prob.z,like.zw)
@@ -108,7 +118,9 @@ estimateMaxLik <-
     dllk <- Inf
     llk <- -Inf
     iter <- 0L
-    while (iter<max.iter && dllk >= min(abs.step,abs(rel.step * llk)))
+    while (iter<max.iter && (
+	dllk >= min(abs.step,abs(rel.step * llk)) ||
+	max(abs(all.derivs(y,eta,omega,psi))) > abs.step))
     {
 	iter <- iter + 1L
 	old.llk <- llk
@@ -127,7 +139,7 @@ estimateMaxLik <-
 	eodcp <- eta %*% omega %*% diag(1-psi)
 	eop <- rowSums(eodp)
 	eodp <- eodp/eop
-	like.zw <- t(dmulti(tab$tab,eodp))
+	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
     }
