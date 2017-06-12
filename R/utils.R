@@ -67,6 +67,29 @@ dZ.V <- function(V){
         prob.z.v(V)
     }
 }
+##' Stick Breaking Probabilities from Mixture Component
+##'
+##' Given a collection of probabilities as \code{prob.z), form
+##' sticking breaking probabilities (continuation fraction
+##' complements).  If \code{len=k} is given, use \code{rep(1/k,k)} in
+##' place of \code{prob.z}.
+##' @title Mixture Class Probabilities
+##' @param prob.z numeric vector of probabilities
+##' @param len number of probabilities
+##' @param tol numeric value specifying how far can \code{sum(prob.z)}
+##'     be from 1.0 before stoping the computation
+##' @return stick breaking probabilities
+##' @export
+##' @author Charles Berry
+dV.Z <- function(prob.z,len,tol=.Machine$double.eps*10){
+    if (!missing(len)){
+        1.0/(len:1)
+    } else {
+        if ((length(prob.z)==1 && prob.z != 1.0) ||
+            abs(sum(prob.z)-1.0)<tol ) stop("ill formed prob.z arg")
+        prob.z/rev(cumsum(rev(prob.z)))
+    }
+}
 
 prob.z.v <- function(v) {
     v <- pmin(1.0,v)
