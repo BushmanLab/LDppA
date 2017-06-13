@@ -28,9 +28,11 @@ static const R_CMethodDef CEntries[] = {
 /* .Call calls */
 
 extern SEXP amllk( SEXP phi, SEXP w, SEXP omegaPsi);
+extern SEXP dldphi( SEXP phi, SEXP w, SEXP op);
 
 static const R_CallMethodDef CallEntries[] = {
   CALLDEF(amllk, 3),
+  CALLDEF(dldphi, 3),
   {NULL, NULL, 0}
 };
 

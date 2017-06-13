@@ -44,21 +44,24 @@ estimateMaxLik <-
     argmax.llk <- function(phi,w,omega.psi){
 	.Call("amllk",phi,as.double(w),omega.psi)
     }
-    dllkdphi <- function(phi,w,omega.psi){
-	xp2 <- c(0,phi)
-	xp3 <- exp(xp2)
-	xp4 <- xp3/sum(xp3)
-	xp5 <- xp4%*%omega.psi
-	xp6 <- xp5/sum(xp5)
-	dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
-	dxp3.dxp2 <- diag(xp3)
-	dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
-	dxp5.dxp4 <- t(omega.psi)
-	dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
-	dxp7.dxp6 <- diag(1/as.vector(xp6))
-	dxp8.dxp7 <- matrix(w,nrow=1)
-	dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
-	    dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
+    ## dllkdphi <- function(phi,w,omega.psi){
+    ##     xp2 <- c(0,phi)
+    ##     xp3 <- exp(xp2)
+    ##     xp4 <- xp3/sum(xp3)
+    ##     xp5 <- xp4%*%omega.psi
+    ##     xp6 <- xp5/sum(xp5)
+    ##     dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
+    ##     dxp3.dxp2 <- diag(xp3)
+    ##     dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
+    ##     dxp5.dxp4 <- t(omega.psi)
+    ##     dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
+    ##     dxp7.dxp6 <- diag(1/as.vector(xp6))
+    ##     dxp8.dxp7 <- matrix(w,nrow=1)
+    ##     dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
+    ##         dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
+    dllkdphi <- function(phi,w,omega.psi)
+	.Call("dldphi",
+	      as.double(phi), as.double(w), as.double(omega.psi))
     opt.fun <- function(i){
 	## using good starting values helps speed and accuracy
 	## using dumb starting values gives some negative updates
