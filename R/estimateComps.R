@@ -33,13 +33,16 @@ estimateMaxLik <-
 	     rel.step=1e-06,abs.step=1e-3,alpha.max=1.0)
 {
     mc <- match.call()
-    argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
-	log.eta <- c(0,phi)-max(0,phi)
-	eta <- exp(log.eta)/sum(exp(log.eta))
-	eta.op <- eta%*%omega.psi
-	eta.op <- eta.op/sum(eta.op)
-	res <- sum(w*log(eta.op))
-	res
+    ## argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
+    ##     log.eta <- c(0,phi)-max(0,phi)
+    ##     eta <- exp(log.eta)/sum(exp(log.eta))
+    ##     eta.op <- eta%*%omega.psi
+    ##     eta.op <- eta.op/sum(eta.op)
+    ##     res <- sum(w*log(eta.op))
+    ##     res
+    ## }
+    argmax.llk <- function(phi,w,omega.psi){
+	.Call("amllk",phi,as.double(w),omega.psi)
     }
     dllkdphi <- function(phi,w,omega.psi){
 	xp2 <- c(0,phi)

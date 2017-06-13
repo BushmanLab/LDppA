@@ -1,6 +1,8 @@
 #include <stdlib.h> // for NULL
 #include <R_ext/Rdynload.h>
+#include <Rinternals.h>
 
+#define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
 /* .C calls */
 
@@ -22,8 +24,18 @@ static const R_CMethodDef CEntries[] = {
   {NULL, NULL, 0}
 };
 
+
+/* .Call calls */
+
+extern SEXP amllk( SEXP phi, SEXP w, SEXP omegaPsi);
+
+static const R_CallMethodDef CallEntries[] = {
+  CALLDEF(amllk, 3),
+  {NULL, NULL, 0}
+};
+
 void R_init_ECTC(DllInfo *dll)
 {
-  R_registerRoutines(dll, CEntries, NULL, NULL, NULL);
+  R_registerRoutines(dll, CEntries, CallEntries, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
 }
