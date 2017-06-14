@@ -45,7 +45,7 @@ rmulti <-
     }
 
 dmulti <-
-    function(y,p,min.p=0.0){
+    function(y, p, min.p=0.0, log.p=FALSE){
 	## for each row of y and row of p compute prob
 	## result is nrow(y) X ncol(p) 
 	if (!is.matrix(y)) dim(y) <- c(1,length(y))
@@ -55,6 +55,7 @@ dmulti <-
 	stopifnot(abs(rowSums(p)-1.0)<sqrt(.Machine$double.eps))
 	res <- tcrossprod(y, log(p))
 	res.M <- lgamma(rowSums(y)+1)-rowSums(lgamma(y+1))
+	if (log.p) return( res.M + res )
 	if (min.p==0.0) 
 	    exp(res.M+res)
 	else
