@@ -30,35 +30,12 @@ t##' Maximum Likelihood or Posterior Estimation for the ECTC Model
 estimateMaxLik <-
     function(
 	     V,eta,alpha=0,params,tab,max.iter=500L,
-	     rel.step=1e-06,abs.step=1e-3,alpha.max=1.0)
+	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0)
 {
     mc <- match.call()
-    ## argmax.llk <- function(phi,w,omega.psi,tol=1e-10){
-    ##     log.eta <- c(0,phi)-max(0,phi)
-    ##     eta <- exp(log.eta)/sum(exp(log.eta))
-    ##     eta.op <- eta%*%omega.psi
-    ##     eta.op <- eta.op/sum(eta.op)
-    ##     res <- sum(w*log(eta.op))
-    ##     res
-    ## }
     argmax.llk <- function(phi,w,omega.psi){
 	.Call("amllk",phi,as.double(w),omega.psi)
     }
-    ## dllkdphi <- function(phi,w,omega.psi){
-    ##     xp2 <- c(0,phi)
-    ##     xp3 <- exp(xp2)
-    ##     xp4 <- xp3/sum(xp3)
-    ##     xp5 <- xp4%*%omega.psi
-    ##     xp6 <- xp5/sum(xp5)
-    ##     dxp2.dphi <- rbind(0,diag(nrow=length(phi)))
-    ##     dxp3.dxp2 <- diag(xp3)
-    ##     dxp4.dxp3 <- diag(nrow=length(xp3))/sum(xp3) - xp3/sum(xp3)^2
-    ##     dxp5.dxp4 <- t(omega.psi)
-    ##     dxp6.dxp5 <- diag(nrow=length(xp5))/sum(xp5) - as.vector(xp5)/sum(xp5)^2
-    ##     dxp7.dxp6 <- diag(1/as.vector(xp6))
-    ##     dxp8.dxp7 <- matrix(w,nrow=1)
-    ##     dxp8.dxp7 %*% dxp7.dxp6 %*% dxp6.dxp5 %*% dxp5.dxp4 %*%
-    ##         dxp4.dxp3 %*% dxp3.dxp2 %*% dxp2.dphi}
     dllkdphi <- function(phi,w,omega.psi)
 	.Call("dldphi",
 	      as.double(phi), as.double(w), as.double(omega.psi))
@@ -126,11 +103,12 @@ estimateMaxLik <-
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
-	max(abs(all.derivs(y,eta,omega,psi))) > abs.step))
+	max(abs(old.prob.z-prob.z)>abs.step)))
     {
 	iter <- iter + 1L
 	old.llk <- llk
 	prob.z.w <- update.prob.z.w(prob.z,like.zw)
+	old.prob.z <- prob.z
 	prob.z <- update.prob.z(prob.z.w)
 	if (alpha!=0) {
 	    ex <- prob.z.w %*% tab$n
@@ -149,10 +127,14 @@ estimateMaxLik <-
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
     }
+    ## complete data loglike
+    ex.z.w <- sweep(prob.z.w,2,tab$n,"*")
+    completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
     list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
-	 dllk=llk-old.llk,alpha.llk=alphallk,call=mc)
+	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
+	 call=mc)
 }
 
 ##' MCMC Sampler for ECTC Model
