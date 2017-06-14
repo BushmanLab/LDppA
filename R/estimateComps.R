@@ -1,4 +1,4 @@
-t##' Maximum Likelihood or Posterior Estimation for the ECTC Model 
+##' Maximum Likelihood or Posterior Estimation for the ECTC Model 
 ##'
 ##' Under the ECTC model given starting values for eta and V, expected
 ##' values for \code{sum(Z==t)}.  Maximum likelihood or maximum
