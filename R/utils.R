@@ -86,7 +86,7 @@ dV.Z <- function(prob.z,len,tol=.Machine$double.eps*10){
         1.0/(len:1)
     } else {
         if ((length(prob.z)==1 && prob.z != 1.0) ||
-            abs(sum(prob.z)-1.0)<tol ) stop("ill formed prob.z arg")
+            abs(sum(prob.z)-1.0)>tol ) stop("ill formed prob.z arg")
         prob.z/rev(cumsum(rev(prob.z)))
     }
 }
