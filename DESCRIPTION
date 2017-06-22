@@ -1,6 +1,6 @@
 Package: ECTC
-Version: 0.99.60
-Date: 2017-06-19
+Version: 0.99.61
+Date: 2017-06-22
 Title: Estimation of Cell Type Compositions
 Author: Charles C. Berry [aut, cre]
 Maintainer: "Charles C. Berry" <cberry@ucsd.edu>

@@ -21,6 +21,7 @@
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
 ##' @param alpha.max upper limit of \code{alpha/nrow(eta)}
+##' @param ... unused
 ##' @export
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
@@ -30,7 +31,7 @@
 estimateMaxLik <-
     function(
 	     V,eta,alpha=0,params,tab,max.iter=500L,
-	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0)
+	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
 {
     mc <- match.call()
     argmax.llk <- function(phi,w,omega.psi){
@@ -123,6 +124,8 @@ estimateMaxLik <-
 	eodcp <- eta %*% omega %*% diag(1-psi)
 	eop <- rowSums(eodp)
 	eodp <- eodp/eop
+	## there can be error here for low probabilities
+	## as a check: completellk >= like.zw
 	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
@@ -136,6 +139,267 @@ estimateMaxLik <-
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
 	 call=mc)
 }
+
+##' Find Parsimonious MaxLik by Splitting and Merging
+##'
+##' This is a wrapper for \code{\link{estimateMaxLik}}, which see for
+##' details about parameters and the return value
+##' @title Stepwise Maximization
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param tol how fine to tune
+##' @param ... other args to pass down
+##' @param min.n smallest pseudo n for BIC
+##' @param verbose print extra stuff, if 2 print lots
+##' @return list with updated parms
+##' @export
+##' @author Charles Berry
+stepMaxLik <-  function(V,eta,alpha,params,tab,tol=1e-6,...,
+			min.n=2,verbose=TRUE){
+    try.again <- 2
+    while (try.again){
+	mres <- mergeMaxLik(V,eta,alpha,params,tab,
+			    min.n=min.n, ..., verbose=verbose)
+	if (verbose==2) {
+	    print(round(mres$eta,3))
+	    print(round(mres$prob.z,4))
+	}
+	sres <- splitMaxLik(mres$V,mres$eta,mres$alpha,
+			    params,tab,min.n=min.n,
+			    ...,verbose=verbose)
+	if (verbose==2) {
+	    print(round(sres$eta,3))
+	    print(round(sres$prob.z,4))
+	}
+	if (try.again==2)
+	{
+	    try.again <- 1
+	    old.llk <- sres$logLik
+	} else {
+	    llk <- sres$logLik
+	    try.again <- llk > old.llk+tol
+	    old.llk <- llk
+	}
+	if (verbose) cat(old.llk,"\n")
+	V <- sres$V
+	eta <- sres$eta
+	alpha <- sres$alpha
+    }    
+    sres
+}
+
+##' Improve MaxLik by Splitting
+##'
+##' This is a wrapper for \code{\link{estimateMaxLik}}, which see for
+##' details about parameters and the return value
+##' @title Splitting for Better BIC
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param ... other args to pass down
+##' @param verbose print extra stuff, if 2 print lots
+##' @return list with updated parms
+##' @export
+##' @author Charles Berry
+splitMaxLik <- function(V,eta,alpha,params,tab,...,verbose=TRUE){
+    result <- "split"
+    save.res <- NULL
+    while( result == "split" ){
+	if (verbose) cat("s")
+	res <- splitBestMaxLik(V,eta,alpha,params,tab,...)
+	result <- res$action
+	if (result=="split") {
+	    eta <- res$res$eta
+	    V <- res$res$V
+	    alpha <- res$res$alpha
+	    save.res <- res$res
+	}
+    }
+    if (verbose) cat("\n")
+    if (!is.null(save.res))
+	save.res
+    else
+	estimateMaxLik(V,eta,alpha,params,tab,...)
+}
+
+##' Make Model Parsimonious by Merging for Best BIC
+##'
+##' This is a wrapper for \code{\link{estimateMaxLik}}, which see for
+##' details about parameters and the return value
+##' @title Merging to Better BIC
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param ... other args to pass down
+##' @param verbose print extra stuff, if 2 print lots
+##' @return list with updated parms
+##' @export
+##' @author Charles Berry
+mergeMaxLik <- function(V,eta,alpha,params,tab,...,verbose=verbose){
+    result <- "merge"
+    save.res <- NULL
+    while( result == "merge" ){
+	if (verbose) cat("m")
+	res <- comboMaxLik(V,eta,alpha,params,tab,...)
+	result <- res$action
+	if (result=="merge") {
+	    eta <- res$res$eta
+	    V <- res$res$V
+	    alpha <- res$res$alpha
+	    save.res <- res$res
+	}
+    }
+    if (verbose) cat("\n")
+    if (!is.null(save.res))
+	save.res
+    else
+	estimateMaxLik(V,eta,alpha,params,tab,...)
+}
+
+
+##' Do Best Merge (or not)
+##'
+##' This is a wrapper for \code{\link{estimateMaxLik}}, which see for
+##' details about parameters and the return value
+##' @title Merge One Pair for Better BIC
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param min.n smallest pseudo n for BIC
+##' @param ... other args to pass down
+##' @return list with updated parms
+##' @importFrom utils combn
+##' @export
+##' @author Charles Berry
+comboMaxLik <- function(V,eta,alpha,params,tab,min.n=2.0,...){
+    T <- nrow(eta)
+    eta.rows <- combn(T,2,simplify=FALSE)
+    prob.z <- dZ.V(V)
+    nparm <- ncol(eta)
+    combo.res <-
+	lapply(eta.rows,
+	       function(x){
+		   tab2 <- wttab.slice(x,V,eta,params,tab)
+		   eta2 <- eta[x,]
+		   V2 <- dV.Z(prop.table(prob.z[x]))
+		   res2 <- estimateMaxLik(V2,eta2,alpha,params,tab2,...)
+		   res1 <- estimateMaxLik(1.0,matrix(colMeans(eta2),nrow=1),
+					  alpha,params,tab2,...)
+		   bicdiff <- -2*( res2$logLik-res1$logLik ) +
+		       log(max(min.n,sum(tab2$n)))*nparm
+		   list(bic.diff=bicdiff,split=res2,merge=res1)
+	       })
+    worst.indx <- which.max(sapply(combo.res,"[[","bic.diff"))
+    worst.bic <- combo.res[[worst.indx]]$bic.diff
+    if (worst.bic<0){
+	list(action="none",res=NULL)
+    } else {
+	merge.rows <- eta.rows[[worst.indx]]    
+	eta.new <- rbind(eta[-merge.rows,],combo.res[[worst.indx]]$merge$eta)
+	V.new <- dV.Z(c(prob.z[-merge.rows],sum(prob.z[merge.rows])))
+	res.new <- estimateMaxLik(V.new,eta.new,alpha,params,tab,...)
+	list(action="merge", res=res.new)
+    }
+}
+
+
+
+
+##' Do Best Split (or not)
+##'
+##' This is a wrapper for \code{\link{estimateMaxLik}}, which see for
+##' details about parameters and the return value
+##' @title Split Once for Better BIC
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param min.n smallest pseudo n for BIC
+##' @param reflect Use random, antithetical compositions
+##' @param ... other args to pass down
+##' @return list with updated parms
+##' @export
+##' @author Charles Berry
+splitBestMaxLik <- function(V,eta,alpha,params,tab,min.n=2.0,reflect=TRUE,...){
+    T <- nrow(eta)
+    eta.rows <- as.list(1:T)
+    prob.z <- dZ.V(V)
+    nparm <- ncol(eta)
+    split.res <-
+	lapply(eta.rows,
+	       function(x){
+		   tab2 <- wttab.slice(x,V,eta,params,tab)
+		   eta1 <- eta[x,,drop=FALSE]
+		   eta.trial <-
+		       if (reflect)
+		       {
+			   eta.rnd <-
+			       prop.table(pmax(rgamma(nparm,eta1*50),
+					       .Machine$double.xmin)) 
+			   eta.anti <- eta.reflect(eta.rnd,eta1)
+			   rbind(eta.rnd,eta.anti)
+		       } else {
+			   reta(2)
+		       }
+		   res2 <- estimateMaxLik(dV.Z(len=2),eta.trial,
+					  alpha,params,tab2,...)
+		   res1 <- estimateMaxLik(1.0,eta1,alpha,params,tab2,...)
+		   bicdiff <- -2*( res2$logLik-res1$logLik ) +
+		       log(max(min.n,sum(tab2$n)))*nparm
+		   list(bic.diff=bicdiff,split=res2,merge=res1)
+	       })
+
+    best.indx <- which.min(sapply(split.res,"[[","bic.diff"))
+    best.bic <- split.res[[best.indx]]$bic.diff
+    if (best.bic>0){
+	list(action="none",res=NULL)
+    } else {
+	res.best <- split.res[[best.indx]]$split
+	split.row <- eta.rows[[best.indx]]    
+	eta.new <- rbind(eta[-split.row,],res.best$eta)
+	V.new <- dV.Z(c(prob.z[-split.row],prob.z[split.row]*res.best$prob.z))
+	res.new <- estimateMaxLik(V.new,eta.new,alpha,params,tab,...)
+	list(action="split", res=res.new)
+    }
+}
+
+
+expect.zw <- function(V, eta, params, tab){
+    omega.psi <-
+	params$omega %*% diag(params$psi)
+    eodp <- prop.table(eta%*%omega.psi,1)
+    prob.z <- dZ.V(V)
+    like.zw <- t(dmulti(tab$tab,eodp))
+    e.zw <- prop.table(like.zw*prob.z,2)%*%diag(tab$n)
+}
+
+
+wttab.slice <- function(rowindex,V,eta,params,tab,tol=1e-2){
+    evals <- expect.zw(V, eta, params, tab)
+    tab$n <-
+	if (length(rowindex)==1)
+	    evals[rowindex,]
+	else
+	    colSums(evals[rowindex,])
+    tab$data.index <- NULL
+    ok <- tab$n>tol
+    if (!all(ok)) {
+	tab$tab <- tab$tab[ok,]
+	tab$n <- tab$n[ok]
+    }
+    tab}
+
+eta.reflect <- function(x,base) prop.table(base/x)
 
 ##' MCMC Sampler for ECTC Model
 ##'
