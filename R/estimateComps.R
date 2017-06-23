@@ -151,16 +151,17 @@ estimateMaxLik <-
 ##' @param params omega and psi
 ##' @param tab \code{wttab(...)}
 ##' @param tol how fine to tune
+##' @param max.cycles limit on number of cycles of merging/splitting 
 ##' @param ... other args to pass down
 ##' @param min.n smallest pseudo n for BIC
 ##' @param verbose print extra stuff, if 2 print lots
 ##' @return list with updated parms
 ##' @export
 ##' @author Charles Berry
-stepMaxLik <-  function(V,eta,alpha,params,tab,tol=1e-6,...,
-			min.n=2,verbose=TRUE){
+stepMaxLik <-  function(V,eta,alpha,params,tab,tol=1e-6,max.cycles=10L,...,
+			min.n=2,verbose=FALSE){
     try.again <- 2
-    while (try.again){
+    while (try.again && {max.cycles <- max.cycles-1} >= 0 ){
 	mres <- mergeMaxLik(V,eta,alpha,params,tab,
 			    min.n=min.n, ..., verbose=verbose)
 	if (verbose==2) {
@@ -206,7 +207,7 @@ stepMaxLik <-  function(V,eta,alpha,params,tab,tol=1e-6,...,
 ##' @return list with updated parms
 ##' @export
 ##' @author Charles Berry
-splitMaxLik <- function(V,eta,alpha,params,tab,...,verbose=TRUE){
+splitMaxLik <- function(V,eta,alpha,params,tab,...,verbose=FALSE){
     result <- "split"
     save.res <- NULL
     while( result == "split" ){
@@ -242,7 +243,7 @@ splitMaxLik <- function(V,eta,alpha,params,tab,...,verbose=TRUE){
 ##' @return list with updated parms
 ##' @export
 ##' @author Charles Berry
-mergeMaxLik <- function(V,eta,alpha,params,tab,...,verbose=verbose){
+mergeMaxLik <- function(V,eta,alpha,params,tab,...,verbose=FALSE){
     result <- "merge"
     save.res <- NULL
     while( result == "merge" ){
