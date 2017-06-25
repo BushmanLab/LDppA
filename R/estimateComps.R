@@ -313,6 +313,57 @@ comboMaxLik <- function(V,eta,alpha,params,tab,min.n=2.0,...){
 }
 
 
+##' Successively Delete Compositions Using AIC or Similar Criterion
+##'
+##' 
+##' @title Delete Unneeded Compositions  
+##' @param V sticks
+##' @param eta compositions
+##' @param alpha tuning
+##' @param params omega and psi
+##' @param tab \code{wttab(...)}
+##' @param XIC multiplier. 2.0 yields AIC.
+##' @param ... pass these also to \code{estimateMaxLik}
+##' @param verbose if \code{TRUE} monitor progress
+##' @return an object like \code{\link{estimateMaxLik}}
+##' @export
+##' @author Charles Berry
+deleteMaxLik <- function(V,eta,alpha,params,tab,XIC=2.0,...,verbose=FALSE){
+    T <- nrow(eta)
+    eta.rows <- 1:T
+    nparm <- ncol(eta)
+    res1 <- estimateMaxLik(V,eta, alpha,params,tab,...)
+    action <- "merge"
+    while (action=="merge"){
+	combo.res <-
+	    lapply(eta.rows,
+		   function(x){
+		       eta2 <- res1$eta[-x,]
+		       V2 <- dV.Z(prop.table(res1$prob.z[-x]))
+		       res2 <- estimateMaxLik(V2,eta2,res1$alpha,params,tab,...)
+		       bicdiff <- -2*( res1$logLik - res2$logLik ) +
+			   XIC*nparm
+		       list(bic.diff=bicdiff,merge=res2)
+		   })
+	worst.indx <- which.max(sapply(combo.res,"[[","bic.diff"))
+	worst.bic <- combo.res[[worst.indx]]$bic.diff
+	res.new <- combo.res[[worst.indx]][["merge"]]
+	if (worst.bic<0){
+	    action <- "none"
+	    res.new <- res1
+	} else {
+	    if (verbose) cat("m")
+	    res1 <- res.new
+	    action <- if (length(res1$V)>2) "merge" else "none"
+	    eta.rows <- 1:nrow(res1$eta)
+	}
+    }
+    if (verbose) cat("\n")
+    res.new
+}
+
+
+
 
 
 ##' Do Best Split (or not)

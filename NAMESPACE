@@ -3,6 +3,7 @@
 export(comboMaxLik)
 export(dV.Z)
 export(dZ.V)
+export(deleteMaxLik)
 export(estimateComps)
 export(estimateMaxLik)
 export(eva.initialize)
