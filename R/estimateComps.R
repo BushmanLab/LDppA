@@ -48,6 +48,7 @@ estimateMaxLik <-
 		     argmax.llk,dllkdphi,
 		     w=y[i,],
 		     omega=omega%*%diag(psi),
+		     method="BFGS",
 		     control=list(fnscale=-1))
 	eta.from.phi(opt$par)
     }
