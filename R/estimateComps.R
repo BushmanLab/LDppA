@@ -7,6 +7,12 @@
 ##' initialized to zero) is obtained by maximizing the posterior.  As
 ##' such, this qualifies as an empirical Bayes approach.
 ##' @title estimateMaxLik
+##' @aliases estimateMaxLik2
+##' @usage estimateMaxLik(V,eta,alpha=0,params,tab,max.iter=500L,
+##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+##'
+##' estimateMaxLik2(V,eta,alpha=0,params,tab,max.iter=500L,
+##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
 ##' @param V numeric vector of initial values for \code{V}. Last value
 ##'     is 1.0.
 ##' @param eta numeric matrix of initial values for \code{eta}.
@@ -63,13 +69,16 @@ estimateMaxLik <-
 			  function(j) dllkdphi(log.safe.eta[i,],y[j,],op))
 	    rowSums(dde)})}
     update.prob.z.w <-
-	function(prob.z,lik.zw)
-	    prop.table(lik.zw * prob.z, 2) # equiv diag(prob.z) %*% lik.zw
+	function(prob.z,lik.zw){
+	    x <- lik.zw * prob.z
+	    x/rep(colSums(x),each=length(prob.z))
+        }
     update.prob.z <-
 	function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
 	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - if (a==0) 0 else 1 )
-	prop.table(pmax(1e-12,ez.w))
+	x <- pmax(1e-12,ez.w)
+	x/sum(x)
     }
     ldmn <- function(alpha,x){
 	k <- length(x)
@@ -110,6 +119,130 @@ estimateMaxLik <-
 	iter <- iter + 1L
 	old.llk <- llk
 	prob.z.w <- update.prob.z.w(prob.z,like.zw)
+	old.prob.z <- prob.z
+	prob.z <- update.prob.z(prob.z.w)
+	if (alpha!=0) {
+	    ex <- prob.z.w %*% tab$n
+	    uap <- update.alpha(ex)
+	    alpha <- uap$maximum * k # like Dir(alpha/N,...)
+	    alphallk <- uap$objective
+	}
+	y <-  prob.z.w %*% (tab$tab*tab$n) 
+	rowvals <- sapply(1:nrow(y), opt.fun)
+	eta <- t(rowvals)
+	eodp <- eta %*% omega %*% diag(psi)
+	eodcp <- eta %*% omega %*% diag(1-psi)
+	eop <- rowSums(eodp)
+	eodp <- eodp/eop
+	## there can be error here for low probabilities
+	## as a check: completellk >= like.zw
+	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
+	llk <- sum(tab$n*log(prob.z%*%like.zw))
+	dllk <- llk-old.llk
+    }
+    ## complete data loglike
+    ex.z.w <- sweep(prob.z.w,2,tab$n,"*")
+    completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
+    if (alpha==0) alphallk <- 0
+    V <- prob.z/rev(cumsum(rev(prob.z)))
+    list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
+	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
+	 call=mc)
+}
+
+##' @export
+estimateMaxLik2 <-
+    function(
+	     V,eta,alpha=0,params,tab,max.iter=500L,
+	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+{
+    mc <- match.call()
+    argmax.llk <- function(phi,w,omega.psi){
+	.Call("amllk",phi,as.double(w),omega.psi)
+    }
+    dllkdphi <- function(phi,w,omega.psi)
+	.Call("dldphi",
+	      as.double(phi), as.double(w), as.double(omega.psi))
+    opt.fun <- function(i){
+	## using good starting values helps speed and accuracy
+	## using dumb starting values gives some negative updates
+	safe.eta <- prop.table(eta[i,]+1e-08)
+	opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
+		     argmax.llk,dllkdphi,
+		     w=y[i,],
+		     omega=omega%*%diag(psi),
+		     method="BFGS",
+		     control=list(fnscale=-1))
+	eta.from.phi(opt$par)
+    }
+    all.derivs <- function(y,eta,omega,psi){
+	op <- omega%*%diag(psi)
+	safe.eta <- prop.table(eta+1e-08,1)
+	log.safe.eta <- log(safe.eta[,-1,drop=FALSE])-log(safe.eta[,1])
+	ne <- nrow(eta)
+	ny <- nrow(y)
+	sapply(1:ne, function(i){
+	    dde <- sapply(1:ny,
+			  function(j) dllkdphi(log.safe.eta[i,],y[j,],op))
+	    rowSums(dde)})}
+    update.prob.z.w <-
+	function(prob.z,lik.zw,prob.wp.z,wpui){
+	    x <- (lik.zw * prob.wp.z[,wpui]) * prob.z 
+	    x/rep(colSums(x),each=length(prob.z))
+        }
+    update.prob.z <-
+	function(prob.z.w,a=alpha,kv=k,wt=tab)
+    {
+	ez.w <- as.vector( prob.z.w %*% wt$n + a/kv - if (a==0) 0 else 1 )
+	x <- pmax(1e-12,ez.w)
+	x/sum(x)
+    }
+    ldmn <- function(alpha,x){
+	k <- length(x)
+	n <- sum(x)
+	lgamma(k*alpha) + lfactorial(n) - lgamma(n+k*alpha) +
+	    sum(lgamma(x+alpha)) - sum(lfactorial(x)) - k*lgamma(alpha)
+    }
+    update.alpha <-
+	function(ex){
+	    optimize(
+		function(x) ldmn(x,ex),
+		c(0.0,alpha.max),maximum=TRUE)
+	}
+    omega <- params$omega
+    psi <- params$psi
+    k <- nrow(eta)
+    ## inits
+    wplus <- rowSums(tab$tab)
+    wpu <- sort(unique(wplus))
+    wpui <- match(wplus,wpu)
+    ## mm <- model.matrix(~0+factor(wplus,wpu))
+    mm <- diag(length(wpu))[wpui,]
+    eodp <- eta %*% omega %*% diag(psi)
+    eodcp <- eta %*% omega %*% diag(1-psi)
+    eop <- rowSums(eodp)
+    eodp <- eodp/eop
+    like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
+    prob.wp.z <- matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
+    prob.z <- dZ.V(V)
+    if (alpha!=0) {
+	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
+	prob.z <- update.prob.z(prob.z.w)
+	ex <- prob.z.w %*% tab$n
+	alpha <- update.alpha(prob.z)$maximum * k # like Dir(alpha/N,...)
+    }
+    ## updates
+    dllk <- Inf
+    llk <- -Inf
+    iter <- 0L
+    while (iter<max.iter && (
+	dllk >= min(abs.step,abs(rel.step * llk)) ||
+	max(abs(old.prob.z-prob.z)>abs.step)))
+    {
+	iter <- iter + 1L
+	old.llk <- llk
+	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
+	prob.wp.z <- prop.table(sweep(prob.z.w,2,tab$n,"*")%*%mm,1)
 	old.prob.z <- prob.z
 	prob.z <- update.prob.z(prob.z.w)
 	if (alpha!=0) {
@@ -327,6 +460,7 @@ comboMaxLik <- function(V,eta,alpha,params,tab,min.n=2.0,...){
 ##' @param ... pass these also to \code{estimateMaxLik}
 ##' @param verbose if \code{TRUE} monitor progress
 ##' @return an object like \code{\link{estimateMaxLik}}
+##' @importFrom parallel mclapply detectCores
 ##' @export
 ##' @author Charles Berry
 deleteMaxLik <- function(V,eta,alpha,params,tab,XIC=2.0,...,verbose=FALSE){
@@ -337,15 +471,15 @@ deleteMaxLik <- function(V,eta,alpha,params,tab,XIC=2.0,...,verbose=FALSE){
     action <- "merge"
     while (action=="merge"){
 	combo.res <-
-	    lapply(eta.rows,
-		   function(x){
-		       eta2 <- res1$eta[-x,]
-		       V2 <- dV.Z(prop.table(res1$prob.z[-x]))
-		       res2 <- estimateMaxLik(V2,eta2,res1$alpha,params,tab,...)
-		       bicdiff <- -2*( res1$logLik - res2$logLik ) +
-			   XIC*nparm
-		       list(bic.diff=bicdiff,merge=res2)
-		   })
+	    mclapply(eta.rows,
+                     function(x){
+                         eta2 <- res1$eta[-x,]
+                         V2 <- dV.Z(prop.table(res1$prob.z[-x]))
+                         res2 <- estimateMaxLik(V2,eta2,res1$alpha,params,tab,...)
+                         bicdiff <- -2*( res1$logLik - res2$logLik ) +
+                             XIC*nparm
+                         list(bic.diff=bicdiff,merge=res2)
+                     },mc.cores=round(detectCores()*3/4))
 	worst.indx <- which.max(sapply(combo.res,"[[","bic.diff"))
 	worst.bic <- combo.res[[worst.indx]]$bic.diff
 	res.new <- combo.res[[worst.indx]][["merge"]]
