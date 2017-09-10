@@ -150,6 +150,8 @@ estimateMaxLik <-
 	 call=mc)
 }
 
+## loglikelihood needs to be reworked
+
 ##' @export
 estimateMaxLik2 <-
     function(
@@ -271,6 +273,7 @@ estimateMaxLik2 <-
     V <- prob.z/rev(cumsum(rev(prob.z)))
     list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
+	 ex.z.w=ex.z.w,
 	 call=mc)
 }
 
@@ -587,6 +590,60 @@ wttab.slice <- function(rowindex,V,eta,params,tab,tol=1e-2){
     tab}
 
 eta.reflect <- function(x,base) prop.table(base/x)
+
+##' The number of ISs of each composition is estimated according to
+##' the sample number.
+##'
+##' Given the results of \code{\link{estimateMaxLik2}}, the original
+##' table of counts by cell type, and the metadata, find the expected
+##' number of ISs by cell number of each composition.
+##' @title Expected IS by Cell Count Sample Numbers
+##' @param tab the results of \code{\link{wttab}()}
+##' @param ex.z.w the result of \code{estimateMaxLik2()$ex.z.w}
+##' @param eta the result of \code{estimateMaxLik2()$eta}
+##' @param omega - confusion matrix
+##' @param psi - subsampling fractions
+##' @param nrep - how many iterations to run
+##' @return list with one vector of expected counts for each composition.
+##' @export
+##' @importFrom stats qnbinom dbinom
+##' @importFrom parallel detectCores mclapply
+##' @author Charles Berry
+dM.W <- function(tab,ex.z.w,eta,omega,psi,nrep=1000L){
+    wplus <- rowSums(tab$tab)
+    wpu <- sort(unique(wplus))
+    wpui <- match(wplus,wpu)
+    ## mm <- model.matrix(~0+factor(wplus,wpu))
+    mm <- diag(length(wpu))[wpui,]
+    wp.z <- ex.z.w%*%mm
+    eodp <- eta %*% omega %*% diag(psi)
+    eodcp <- eta %*% omega %*% diag(1-psi)
+    eop <- rowSums(eodp)
+    eodp <- eodp/eop
+    mlist <- 
+	mclapply(1:nrow(eta),
+		 function(i){
+		     tabj <- as.vector(ex.z.w[i,]%*%mm)
+		     tmax <-
+			 max(wpu) + qnbinom(0.999, max(wpu)-1, eop[i])
+		     ivals <- 1:tmax
+		     ## rows wpu, cols M
+		     pmat <- outer(wpu,ivals,dbinom,prob=eop[i])
+		     pobs <- 1-(1-eop[i])^ivals
+		     padj <- pmat/rowSums(pmat)
+		     n.init <- colSums(padj*tabj)
+		     for (irep in 1:nrep){
+			 padj <- sweep(pmat,2,n.init,"*")
+			 rsm.padj <- rowSums(padj)
+			 padj <- padj/ifelse(rsm.padj==0,1.0,rsm.padj)
+			 n.new <- colSums(padj*tabj)
+			 n.init <- n.new/pobs
+		     }
+		     n.init
+		 },
+		 mc.cores=detectCores()*3/4)
+    mlist
+}
 
 ##' MCMC Sampler for ECTC Model
 ##'
