@@ -1,11 +1,11 @@
 Package: ECTC
-Version: 0.99.70
-Date: 2017-09-10
+Version: 0.99.71
+Date: 2017-09-24
 Title: Estimation of Cell Type Compositions
 Author: Charles C. Berry [aut, cre]
 Maintainer: "Charles C. Berry" <cberry@ucsd.edu>
 Depends: R (>= 3.1.0)
-Imports: parallel, stats, utils 
+Imports: parallel, stats, utils, Rcpp 
 Description: Cell type compositions are estimated from gene
    therapy data.  The data are in the form of a N by K table of
    counts for number of cells in each of N cell lineages for which K
@@ -13,6 +13,7 @@ Description: Cell type compositions are estimated from gene
    has a Dirichlet distribution as its base.  The K cell types are
    subject to misclassification and a confusion matrix must be given
    a priori.
+LinkingTo: Rcpp, RcppArmadillo 
 License: GPL-3 | file LICENSE
 URL: https://github.com/BushmanLab/LDppA.git
 ByteCompile: TRUE
