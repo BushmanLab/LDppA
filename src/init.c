@@ -29,10 +29,14 @@ static const R_CMethodDef CEntries[] = {
 
 extern SEXP amllk( SEXP phi, SEXP w, SEXP omegaPsi);
 extern SEXP dldphi( SEXP phi, SEXP w, SEXP op);
+extern SEXP fixedEtaEMCall(SEXP lkMatrix, SEXP probg,
+			   SEXP ritab, SEXP alpha,
+			   SEXP weights, SEXP nreps);
 
 static const R_CallMethodDef CallEntries[] = {
   CALLDEF(amllk, 3),
   CALLDEF(dldphi, 3),
+  CALLDEF(fixedEtaEMCall,6),
   {NULL, NULL, 0}
 };
 
