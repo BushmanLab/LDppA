@@ -5,11 +5,17 @@
 ##' posterior estimates of cell type counts given \code{Z} and of eta
 ##' then can be obtained.  The value of \code{alpha} (if not
 ##' initialized to zero) is obtained by maximizing the posterior.  As
-##' such, this qualifies as an empirical Bayes approach.
+##' such, this qualifies as an empirical Bayes
+##' approach. \code{estimateMaxLik()} estimates the probability
+##' conditioning on the number of cells observed, i.e. as if there
+##' were no missing information or if it is margined out over a
+##' diffuse prior.  \code{estimateMaxLik2()} estimates the probability
+##' distribution of compositions, but includes information from the
+##' distribution of the observed number of cells in the complete data.
 ##' @title estimateMaxLik
 ##' @aliases estimateMaxLik2
 ##' @usage estimateMaxLik(V,eta,alpha=0,params,tab,max.iter=500L,
-##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+##'     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
 ##'
 ##' estimateMaxLik2(V,eta,alpha=0,params,tab,max.iter=500L,
 ##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
@@ -23,7 +29,8 @@
 ##' @param params list of hyperparameters with elements \code{omega},
 ##'     and \code{psi}. Additional elments are ignored.
 ##' @param tab the result of \code{\link{wttab}()}
-##' @param max.iter \code{integer} limiting iteration
+##' @param max.iter \code{integer} limiting iteration.  If
+##'     \code{max.iter==0} calculate logLik et cetera and return.
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
 ##' @param alpha.max upper limit of \code{alpha/nrow(eta)}
@@ -32,7 +39,9 @@
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
 ##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and
-##'     \code{call}
+##'     \code{call}. \code{estimateMaxLik2()} also returns
+##'     \code{ex.z.w}, the expected number of elements having
+##'     composition z and observed counts w.
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
@@ -102,15 +111,10 @@ estimateMaxLik <-
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
     prob.z <- dZ.V(V)
-    if (alpha!=0) {
-	prob.z.w <- update.prob.z.w(prob.z,like.zw)
-	prob.z <- update.prob.z(prob.z.w)
-	ex <- prob.z.w %*% tab$n
-	alpha <- update.alpha(prob.z)$maximum * k # like Dir(alpha/N,...)
-    }
+    prob.z.w <- update.prob.z.w(prob.z,like.zw)
     ## updates
     dllk <- Inf
-    llk <- -Inf
+    old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
@@ -118,7 +122,6 @@ estimateMaxLik <-
     {
 	iter <- iter + 1L
 	old.llk <- llk
-	prob.z.w <- update.prob.z.w(prob.z,like.zw)
 	old.prob.z <- prob.z
 	prob.z <- update.prob.z(prob.z.w)
 	if (alpha!=0) {
@@ -137,6 +140,7 @@ estimateMaxLik <-
 	## there can be error here for low probabilities
 	## as a check: completellk >= like.zw
 	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
+	prob.z.w <- update.prob.z.w(prob.z,like.zw)
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
     }
@@ -227,15 +231,10 @@ estimateMaxLik2 <-
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
     prob.wp.z <- matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
     prob.z <- dZ.V(V)
-    if (alpha!=0) {
-	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
-	prob.z <- update.prob.z(prob.z.w)
-	ex <- prob.z.w %*% tab$n
-	alpha <- update.alpha(prob.z)$maximum * k # like Dir(alpha/N,...)
-    }
+    prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
     ## updates
     dllk <- Inf
-    llk <- -Inf
+    old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
@@ -243,7 +242,6 @@ estimateMaxLik2 <-
     {
 	iter <- iter + 1L
 	old.llk <- llk
-	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
 	prob.wp.z <- prop.table(sweep(prob.z.w,2,tab$n,"*")%*%mm,1)
 	old.prob.z <- prob.z
 	prob.z <- update.prob.z(prob.z.w)
@@ -263,6 +261,7 @@ estimateMaxLik2 <-
 	## there can be error here for low probabilities
 	## as a check: completellk >= like.zw
 	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
+	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
     }
