@@ -58,13 +58,14 @@ estimateMaxLik <-
     opt.fun <- function(i){
 	## using good starting values helps speed and accuracy
 	## using dumb starting values gives some negative updates
+	## reltol needs to be small to prevent bad updates
 	safe.eta <- prop.table(eta[i,]+1e-08)
 	opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
 		     argmax.llk,dllkdphi,
 		     w=y[i,],
 		     omega=omega%*%diag(psi),
 		     method="BFGS",
-		     control=list(fnscale=-1))
+		     control=list(fnscale=-1,reltol=1e-10))
 	eta.from.phi(opt$par)
     }
     all.derivs <- function(y,eta,omega,psi){
@@ -105,16 +106,20 @@ estimateMaxLik <-
     psi <- params$psi
     k <- nrow(eta)
     ## inits
+    ## bad updates are possible as optim() only converges approximately
+    best.eta <- eta
+    best.V <- V
+    best.alpha <- alpha
     eodp <- eta %*% omega %*% diag(psi)
     eodcp <- eta %*% omega %*% diag(1-psi)
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
-    prob.z <- dZ.V(V)
+    best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw)
     ## updates
     dllk <- Inf
-    old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
+    best.llk <- old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
@@ -143,18 +148,35 @@ estimateMaxLik <-
 	prob.z.w <- update.prob.z.w(prob.z,like.zw)
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
+	if (llk>best.llk){
+	    best.llk <- llk
+	    best.eta <- eta
+	    best.V <- V
+	    best.alpha <- alpha
+	    best.prob.z <- prob.z
+	}
     }
-    ## complete data loglike
+    ## last iteration may not be maxlik - due to numerical issues
+    eodp <- best.eta %*% omega %*% diag(psi)
+    eodcp <- eta %*% omega %*% diag(1-psi)
+    eop <- rowSums(eodp)
+    eodp <- eodp/eop
+    like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
+    prob.z.w <- update.prob.z.w(best.prob.z,like.zw)
+    llk <- best.llk
     ex.z.w <- sweep(prob.z.w,2,tab$n,"*")
+    ## complete data loglike
     completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
-    list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
+    list(logLik=llk,eta=best.eta,alpha=best.alpha,prob.z=best.prob.z,V=best.V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
 	 call=mc)
 }
 
-## loglikelihood needs to be reworked
+## Some finer numerical tuning might be helpful here, like a line
+## search. However, it seems that the numerical issues only arise in
+## the vicinity of a maximum, so it may not be worth the effort.
 
 ##' @export
 estimateMaxLik2 <-
@@ -172,13 +194,14 @@ estimateMaxLik2 <-
     opt.fun <- function(i){
 	## using good starting values helps speed and accuracy
 	## using dumb starting values gives some negative updates
+	## reltol needs to be small to prevent bad updates
 	safe.eta <- prop.table(eta[i,]+1e-08)
 	opt <- optim(log(safe.eta[-1])-log(safe.eta[1]),
 		     argmax.llk,dllkdphi,
 		     w=y[i,],
 		     omega=omega%*%diag(psi),
 		     method="BFGS",
-		     control=list(fnscale=-1))
+		     control=list(fnscale=-1,reltol=1e-10))
 	eta.from.phi(opt$par)
     }
     all.derivs <- function(y,eta,omega,psi){
@@ -219,6 +242,10 @@ estimateMaxLik2 <-
     psi <- params$psi
     k <- nrow(eta)
     ## inits
+    ## bad updates are possible as optim() only converges approximately
+    best.eta <- eta
+    best.V <- V
+    best.alpha <- alpha
     wplus <- rowSums(tab$tab)
     wpu <- sort(unique(wplus))
     wpui <- match(wplus,wpu)
@@ -229,12 +256,14 @@ estimateMaxLik2 <-
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
-    prob.wp.z <- matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
+    best.prob.wp.z <- prob.wp.z <-
+	matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
     prob.z <- dZ.V(V)
+    best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
     ## updates
     dllk <- Inf
-    old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
+    best.llk <- old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
@@ -264,13 +293,29 @@ estimateMaxLik2 <-
 	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
 	llk <- sum(tab$n*log(prob.z%*%like.zw))
 	dllk <- llk-old.llk
+	if (llk>best.llk){
+	    best.llk <- llk
+	    best.eta <- eta
+	    best.V <- V
+	    best.alpha <- alpha
+	    best.prob.z <- prob.z
+	    best.prob.wp.z <- prob.wp.z
+	}
     }
-    ## complete data loglike
+    ## last iteration may not be maxlik - due to numerical issues
+    eodp <- best.eta %*% omega %*% diag(psi)
+    eodcp <- eta %*% omega %*% diag(1-psi)
+    eop <- rowSums(eodp)
+    eodp <- eodp/eop
+    like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
+    prob.z.w <- update.prob.z.w(best.prob.z,like.zw,best.prob.wp.z,wpui)
+    llk <- best.llk
     ex.z.w <- sweep(prob.z.w,2,tab$n,"*")
+    ## complete data loglike
     completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
-    list(logLik=llk,eta=eta,alpha=alpha,prob.z=prob.z,V=V,iter=iter,
+    list(logLik=llk,eta=best.eta,alpha=best.alpha,prob.z=best.prob.z,V=best.V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
 	 ex.z.w=ex.z.w,
 	 call=mc)
