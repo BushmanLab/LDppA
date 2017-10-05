@@ -36,10 +36,13 @@ fixedEtaEM <-
 	weights <- rep(1.0,nrow(lkMatrix))
 	alpha.arg <- 1.0
     } else {
+	if (is.null(weights)) weights <-
+				  rep(1.0,nrow(lkMatrix))
 	weights <- weights/sum(weights)
 	alpha.arg <- alpha
     }
     prob.g <- if (!is.null(p.init)) p.init else weights
+    stopifnot(length(prob.g)==nrow(lkMatrix))
     prob.g <- fixedEtaEMCall( lkMatrix,
                              prob.g, as.matrix(ritab), alpha.arg, weights,nreps ) 
     ## for (ir in 1:nreps){
