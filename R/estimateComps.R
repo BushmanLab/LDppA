@@ -647,13 +647,19 @@ eta.reflect <- function(x,base) prop.table(base/x)
 ##' @param eta the result of \code{estimateMaxLik2()$eta}
 ##' @param omega - confusion matrix
 ##' @param psi - subsampling fractions
-##' @param nrep - how many iterations to run
-##' @return list with one vector of expected counts for each composition.
+##' @param marginal.only If \code{TRUE} return the marginal expected
+##'     cell counts as each list element. Otherwise, return a list
+##'     with the marginal counts, the probabilities of observed counts
+##'     given total count, and the number of expected ISs for each
+##'     observed count.
+##' @param nrep - How many iterations to run
+##' @return list whose contents are determinedby the
+##'     \code{marginal.only} argument.
 ##' @export
 ##' @importFrom stats qnbinom dbinom
 ##' @importFrom parallel detectCores mclapply
 ##' @author Charles Berry
-dM.W <- function(tab,ex.z.w,eta,omega,psi,nrep=1000L){
+dM.W <- function(tab,ex.z.w,eta,omega,psi,marginal.only=TRUE,nrep=1000L){
     wplus <- rowSums(tab$tab)
     wpu <- sort(unique(wplus))
     wpui <- match(wplus,wpu)
@@ -683,7 +689,12 @@ dM.W <- function(tab,ex.z.w,eta,omega,psi,nrep=1000L){
 			 n.new <- colSums(padj*tabj)
 			 n.init <- n.new/pobs
 		     }
-		     n.init
+		     if (marginal.only) n.init
+		     else
+			 list(
+			     marginal=n.init,
+			     pr.wp.m=pmat,
+			     wp.z=tabj)
 		 },
 		 mc.cores=detectCores()*3/4)
     mlist
