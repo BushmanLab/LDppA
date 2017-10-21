@@ -256,14 +256,17 @@ estimateMaxLik2 <-
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
-    best.prob.wp.z <- prob.wp.z <-
+    prob.wp.z <-
 	matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
     prob.z <- dZ.V(V)
     best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
+    best.prob.wp.z <- prob.wp.z <-
+	prop.table(sweep(prob.z.w,2,tab$n,"*")%*%mm,1)
     ## updates
     dllk <- Inf
-    best.llk <- old.llk <- llk <- sum(tab$n*log(prob.z%*%like.zw))
+    best.llk <- old.llk <- llk <- sum(tab$n*log(prob.z%*%
+						(like.zw*prob.wp.z[,wpui])))
     iter <- 0L
     while (iter<max.iter && (
 	dllk >= min(abs.step,abs(rel.step * llk)) ||
@@ -291,7 +294,8 @@ estimateMaxLik2 <-
 	## as a check: completellk >= like.zw
 	like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
 	prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
-	llk <- sum(tab$n*log(prob.z%*%like.zw))
+	llk <- sum(tab$n*log(prob.z%*%
+			     (like.zw*prob.wp.z[,wpui])))
 	dllk <- llk-old.llk
 	if (llk>best.llk){
 	    best.llk <- llk
