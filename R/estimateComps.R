@@ -18,7 +18,8 @@
 ##'     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
 ##'
 ##' estimateMaxLik2(V,eta,alpha=0,params,tab,max.iter=500L,
-##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+##'        rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,
+##'        prob.wp.z=NULL,...)
 ##' @param V numeric vector of initial values for \code{V}. Last value
 ##'     is 1.0.
 ##' @param eta numeric matrix of initial values for \code{eta}.
@@ -34,19 +35,24 @@
 ##' @param rel.step \code{numeric} value limiting iteration
 ##' @param abs.step \code{numeric} value limiting iteration
 ##' @param alpha.max upper limit of \code{alpha/nrow(eta)}
+##' @param prob.wp.z a matrix whose \code{nrow(eta)} rows are
+##'     probabilities of \code{rowSums(tab$tab)}. Typically the result
+##'     of an earlier run of \code{estimateMaxLik2}. Unused by
+##'     \code{estimateMaxLik}
 ##' @param ... unused
 ##' @export
 ##' @importFrom stats optim optimize dmultinom
 ##' @return \code{list} with elements \code{logLik}, \code{eta},
 ##'     \code{prob.z}, \code{V}, \code{iter}, \code{dllk} and
 ##'     \code{call}. \code{estimateMaxLik2()} also returns
-##'     \code{ex.z.w}, the expected number of elements having
-##'     composition z and observed counts w.
+##'     \code{prob.wp.z} and \code{ex.z.w}, the expected number of
+##'     elements having composition z and observed counts w.
 ##' @author Charles Berry
 estimateMaxLik <-
     function(
 	     V,eta,alpha=0,params,tab,max.iter=500L,
-	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,
+	     ...)
 {
     mc <- match.call()
     argmax.llk <- function(phi,w,omega.psi){
@@ -182,7 +188,8 @@ estimateMaxLik <-
 estimateMaxLik2 <-
     function(
 	     V,eta,alpha=0,params,tab,max.iter=500L,
-	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,...)
+	     rel.step=1e-06,abs.step=1e-5,alpha.max=1.0,
+	     prob.wp.z=NULL,...)
 {
     mc <- match.call()
     argmax.llk <- function(phi,w,omega.psi){
@@ -256,9 +263,9 @@ estimateMaxLik2 <-
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
-    prob.wp.z <-
-	matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
-    prob.z <- dZ.V(V)
+    if (is.null(prob.wp.z))
+	prob.wp.z <-
+	    matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
     best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
     best.prob.wp.z <- prob.wp.z <-
@@ -300,7 +307,7 @@ estimateMaxLik2 <-
 	if (llk>best.llk){
 	    best.llk <- llk
 	    best.eta <- eta
-	    best.V <- V
+	    best.V <- best.prob.z/rev(cumsum(rev(best.prob.z)))
 	    best.alpha <- alpha
 	    best.prob.z <- prob.z
 	    best.prob.wp.z <- prob.wp.z
@@ -308,7 +315,7 @@ estimateMaxLik2 <-
     }
     ## last iteration may not be maxlik - due to numerical issues
     eodp <- best.eta %*% omega %*% diag(psi)
-    eodcp <- eta %*% omega %*% diag(1-psi)
+    eodcp <- best.eta %*% omega %*% diag(1-psi)
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp,.Machine$double.xmin))
@@ -321,6 +328,7 @@ estimateMaxLik2 <-
     V <- prob.z/rev(cumsum(rev(prob.z)))
     list(logLik=llk,eta=best.eta,alpha=best.alpha,prob.z=best.prob.z,V=best.V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
+	 prob.wp.z= best.prob.wp.z,
 	 ex.z.w=ex.z.w,
 	 call=mc)
 }
