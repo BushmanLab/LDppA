@@ -657,8 +657,9 @@ eta.reflect <- function(x,base) prop.table(base/x)
 ##' @param tab the results of \code{\link{wttab}()}
 ##' @param ex.z.w the result of \code{estimateMaxLik2()$ex.z.w}
 ##' @param eta the result of \code{estimateMaxLik2()$eta}
-##' @param omega - confusion matrix
-##' @param psi - subsampling fractions
+##' @param params a list containing elements \code{upsilon}, pre-sort
+##'     subsampling fractions, \code{omega}, a confusion matrix,
+##'     and \code{psi}, post-sort subsampling fractions
 ##' @param marginal.only If \code{TRUE} return the marginal expected
 ##'     cell counts as each list element. Otherwise, return a list
 ##'     with the marginal counts, the probabilities of observed counts
@@ -671,15 +672,18 @@ eta.reflect <- function(x,base) prop.table(base/x)
 ##' @importFrom stats qnbinom dbinom
 ##' @importFrom parallel detectCores mclapply
 ##' @author Charles Berry
-dM.W <- function(tab,ex.z.w,eta,omega,psi,marginal.only=TRUE,nrep=1000L){
+dM.W <- function(tab,ex.z.w,eta,params,marginal.only=TRUE,nrep=1000L){
+    psi <- params$psi 
+    omega <- params$omega
+    upsilon <- params$upsilon
     wplus <- rowSums(tab$tab)
     wpu <- sort(unique(wplus))
     wpui <- match(wplus,wpu)
     ## mm <- model.matrix(~0+factor(wplus,wpu))
     mm <- diag(length(wpu))[wpui,]
     wp.z <- ex.z.w%*%mm
-    eodp <- eta %*% omega %*% diag(psi)
-    eodcp <- eta %*% omega %*% diag(1-psi)
+    eodp <- eta %*% diag(upsilon) %*%
+	omega %*% diag(psi)
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     mlist <- 
