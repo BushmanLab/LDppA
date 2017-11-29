@@ -263,9 +263,12 @@ estimateMaxLik2 <-
     eop <- rowSums(eodp)
     eodp <- eodp/eop
     like.zw <- t(dmulti(tab$tab,eodp, .Machine$double.xmin))
-    if (is.null(prob.wp.z))
-	prob.wp.z <-
+    ## ensure a safe value for prob.wp.z
+    prob.wp.z <-
+	if (is.null(prob.wp.z))
 	    matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
+	else
+	    prop.table(pmax(prob.wp.z,.Machine$double.eps),1)
     best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
     best.prob.wp.z <- prob.wp.z <-
