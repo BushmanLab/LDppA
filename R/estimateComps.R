@@ -115,6 +115,7 @@ estimateMaxLik <-
     ## bad updates are possible as optim() only converges approximately
     best.eta <- eta
     best.V <- V
+    stopifnot(nrow(eta)==length(V))
     best.alpha <- alpha
     eodp <- eta %*% omega %*% diag(psi)
     eodcp <- eta %*% omega %*% diag(1-psi)
@@ -245,6 +246,7 @@ estimateMaxLik2 <-
 		function(x) ldmn(x,ex),
 		c(0.0,alpha.max),maximum=TRUE)
 	}
+    stopifnot(nrow(eta)==length(V))
     omega <- params$omega
     psi <- params$psi
     k <- nrow(eta)
@@ -269,6 +271,8 @@ estimateMaxLik2 <-
 	    matrix(1.0,nrow=nrow(like.zw),ncol=length(wpu))
 	else
 	    prop.table(pmax(prob.wp.z,.Machine$double.eps),1)
+    stopifnot(nrow(prob.wp.z)==nrow(eta),
+	      ncol(prob.wp.z)==length(wpu))
     best.prob.z <- prob.z <- dZ.V(V)
     prob.z.w <- update.prob.z.w(prob.z,like.zw,prob.wp.z,wpui)
     best.prob.wp.z <- prob.wp.z <-
