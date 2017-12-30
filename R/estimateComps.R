@@ -28,7 +28,8 @@
 ##'     nrow(eta))} is the initial value of the parameter for a
 ##'     Dirichlet prior on \code{prob.z} (aka \code{dZ.V(V)}).
 ##' @param params list of hyperparameters with elements \code{omega},
-##'     and \code{psi}. Additional elments are ignored.
+##'     \code{psi}, and optionally \code{upsilon}. Additional elements
+##'     are ignored.
 ##' @param tab the result of \code{\link{wttab}()}
 ##' @param max.iter \code{integer} limiting iteration.  If
 ##'     \code{max.iter==0} calculate logLik et cetera and return.
@@ -110,9 +111,13 @@ estimateMaxLik <-
 	}
     omega <- params$omega
     psi <- params$psi
+    upsilon <- params$upsilon
     k <- nrow(eta)
     ## inits
     ## bad updates are possible as optim() only converges approximately
+    ## reparameterizing on entry and exit saves a bit
+    eta <-
+	if (is.null(upsilon)) eta else prop.table(eta%*%diag(upsilon),1)
     best.eta <- eta
     best.V <- V
     stopifnot(nrow(eta)==length(V))
@@ -176,6 +181,7 @@ estimateMaxLik <-
     completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
+    if (!is.null(upsilon)) best.eta <- prop.table(best.eta%*%diag(1/upsilon),1)
     list(logLik=llk,eta=best.eta,alpha=best.alpha,prob.z=best.prob.z,V=best.V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
 	 call=mc)
@@ -226,7 +232,7 @@ estimateMaxLik2 <-
 	function(prob.z,lik.zw,prob.wp.z,wpui){
 	    x <- (lik.zw * prob.wp.z[,wpui]) * prob.z 
 	    x/rep(colSums(x),each=length(prob.z))
-        }
+	}
     update.prob.z <-
 	function(prob.z.w,a=alpha,kv=k,wt=tab)
     {
@@ -249,9 +255,14 @@ estimateMaxLik2 <-
     stopifnot(nrow(eta)==length(V))
     omega <- params$omega
     psi <- params$psi
+    upsilon <- params$upsilon
     k <- nrow(eta)
     ## inits
     ## bad updates are possible as optim() only converges approximately
+    ## reparameterizing on entry and exit saves a bit
+    eta <-
+	if (is.null(upsilon)) eta else prop.table(eta%*%diag(upsilon),1)
+    best.eta <- eta
     best.eta <- eta
     best.V <- V
     best.alpha <- alpha
@@ -333,6 +344,7 @@ estimateMaxLik2 <-
     completellk <- sum(ex.z.w*t(dmulti(tab$tab, eodp, log.p=TRUE)))
     if (alpha==0) alphallk <- 0
     V <- prob.z/rev(cumsum(rev(prob.z)))
+    if (!is.null(upsilon)) best.eta <- prop.table(best.eta%*%diag(1/upsilon),1)
     list(logLik=llk,eta=best.eta,alpha=best.alpha,prob.z=best.prob.z,V=best.V,iter=iter,
 	 dllk=llk-old.llk,alpha.llk=alphallk,complete.llk=completellk,
 	 prob.wp.z= best.prob.wp.z,
