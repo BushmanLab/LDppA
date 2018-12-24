@@ -1,6 +1,6 @@
 Package: ECTC
-Version: 0.99.81
-Date: 2017-12-30
+Version: 0.99.82
+Date: 2018-12-24
 Title: Estimation of Cell Type Compositions
 Author: Charles C. Berry [aut, cre]
 Maintainer: "Charles C. Berry" <cberry@ucsd.edu>
@@ -17,4 +17,4 @@ LinkingTo: Rcpp, RcppArmadillo
 License: GPL-3 | file LICENSE
 URL: https://github.com/BushmanLab/LDppA.git
 ByteCompile: TRUE
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
